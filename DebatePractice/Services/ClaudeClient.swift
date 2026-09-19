@@ -41,14 +41,6 @@ struct ClaudeClient {
         return prompt
     }
 
-    static func briefingSystemPrompt(_ c: PracticeConfig) -> String {
-        var prompt = """
-        You are a debate coach helping a student sharpen a written brief in favor of the resolution: \(c.topic). The student sends drafts of their points. This is a text-to-text editing session, not a live exchange: do not argue the other side. For each draft, respond with exactly two labeled parts. "Sharpened version:" — a rewritten, tighter version that keeps the student's position, voice, and content but removes vagueness, filler, and weak logic, and makes each point land. "What changed and why:" — a short bulleted list naming the specific weaknesses you fixed and any gaps that still need real evidence or an example from the student. Be direct; no praise unless tied to something you can quote. Respond in \(c.language.rawValue). Match the depth of the rewrite to difficulty level: \(c.difficulty.rawValue).
-        """
-        if c.plainLanguage { prompt += plainLanguageNote }
-        return prompt
-    }
-
     static func teamSystemPrompt(_ c: PracticeConfig) -> String {
         let opposing = c.userSide.opposite
         var prompt = """
@@ -64,12 +56,20 @@ struct ClaudeClient {
         """
     }
 
-    static func congressOpponentSystemPrompt(_ c: PracticeConfig, segment: CongressSegment) -> String {
+    static func congressSpeechSystemPrompt(_ c: PracticeConfig, segment: CongressSegment) -> String {
         let billText = c.billText.isEmpty ? "" : "\n\nThe text of the legislation under debate:\n\"\"\"\n\(String(c.billText.prefix(6000)))\n\"\"\""
-        var prompt = """
-        You are a member of a model congress serving on the \(c.committee), debating the legislation: \(c.topic). The student is speaking in \(c.userSide == .affirmative ? "affirmation" : "negation") of the bill; you represent the opposing position and speak only against the student's side.\(billText)
+        let aiIsAuthor = !c.userIsAuthor
+        let role = aiIsAuthor
+            ? "You are the sponsor and author of the legislation. You wrote this bill, you speak for it throughout, and you defend it from every attack the student makes."
+            : "You are a member speaking in opposition to the legislation. The student is its sponsor; you speak only against the bill."
+        let opening = segment.title == "Authorship speech"
+            ? " This is your authorship speech: introduce the bill, explain the problem it solves, walk the chamber through what it actually does, and give the two strongest reasons to pass it."
+            : " Directly refute the student's most recent arguments before advancing your own."
 
-        You are now delivering your \(segment.title.lowercased()), a \(segment.clock) speech in \(segment.stance.lowercased()) of the bill. Write roughly \(segment.wordBudget) words — the amount a speaker covers in \(segment.clock) at a normal speaking pace. Directly refute the student's most recent arguments before advancing your own, and end with exactly one pointed cross-examination question for the student. Maintain parliamentary decorum at all times; address the student as "the representative" or "the senator". Do not cite specific statistics, studies, or numbers unless you are highly confident they are accurate; prefer reasoning and widely known facts, and write "(verify)" after any figure you do use. Respond in \(c.language.rawValue). Match your rigor to difficulty level: \(c.difficulty.rawValue).
+        var prompt = """
+        You are a member of a model congress serving on the \(c.committee), debating the legislation: \(c.topic). \(role)\(billText)
+
+        You are now delivering your \(segment.title.lowercased()), a \(segment.clock) speech in \(segment.stance == .pro ? "support of" : "opposition to") the bill. Write roughly \(segment.wordBudget) words — the amount a speaker covers in \(segment.clock) at a normal speaking pace.\(opening) End with exactly one pointed cross-examination question for the student. Maintain parliamentary decorum at all times; address the student as "the representative" or "the senator". Do not cite specific statistics, studies, or numbers unless you are highly confident they are accurate; prefer reasoning and widely known facts, and write "(verify)" after any figure you do use. Respond in \(c.language.rawValue). Match your rigor to difficulty level: \(c.difficulty.rawValue).
         """
         if c.lowPressure { prompt += lowPressureNote }
         return prompt
@@ -77,10 +77,17 @@ struct ClaudeClient {
 
     static func congressAmendmentSystemPrompt(_ c: PracticeConfig) -> String {
         let billText = c.billText.isEmpty ? "" : "\n\nThe text of the legislation:\n\"\"\"\n\(String(c.billText.prefix(6000)))\n\"\"\""
+        let role = c.userIsAuthor
+            ? "You have been speaking against the bill; the student is its sponsor."
+            : "You are the sponsor and author of the bill; the student has been speaking against it."
         var prompt = """
-        You are a member of a model congress on the \(c.committee) who has been debating the legislation: \(c.topic), speaking against the student's position.\(billText)
+        You are a member of a model congress on the \(c.committee) debating the legislation: \(c.topic). \(role)\(billText)
 
-        The main speeches are over and the floor is now open to amendments. Move exactly one amendment. Structure your turn with these labels, each on its own line: "Motion:" — the formal motion, phrased as "I move to amend the bill by…" naming the specific clause or section and the exact change. "Rationale:" — two or three sentences on why the amendment is necessary, tied to what the student argued. "Question to the sponsor:" — one pointed question the student must answer when they respond to the motion. Keep the whole turn under 200 words. Do not invent statistics; write "(verify)" after any figure. Respond in \(c.language.rawValue).
+        The student has yielded the floor. You may move an amendment, but only if one is genuinely warranted by how the debate went — a specific weakness a speaker actually exposed, or a gap in the bill's text.
+
+        If an amendment is warranted, structure your turn with these labels, each on its own line: "Motion:" — the formal motion, phrased as "I move to amend the bill by…" naming the specific clause or section and the exact change. "Rationale:" — two or three sentences on why it is necessary, tied to what was actually argued. "Question to the sponsor:" — one pointed question the student must answer.
+
+        If no amendment is warranted, do not invent one. Reply with a single line beginning "No motion:" followed by one sentence explaining why the bill should stand or fall as written. Keep the whole turn under 200 words. Do not invent statistics; write "(verify)" after any figure. Respond in \(c.language.rawValue).
         """
         if c.lowPressure { prompt += lowPressureNote }
         return prompt
@@ -155,17 +162,13 @@ struct ClaudeClient {
                                   messages: Self.apiMessages(from: history), maxTokens: 1024)
         case .coach:
             return try await coachTurnFeedback(config: config, history: history)
-        case .briefing:
-            return try await send(system: Self.briefingSystemPrompt(config),
-                                  messages: Self.apiMessages(from: history), maxTokens: 1500)
         case .congress:
             let index = history.filter { $0.effectiveKind == .speech || $0.effectiveKind == .amendment }.count
-            let segment = RoundScript.congressSegment(index)
-            if RoundScript.congressIsAmendmentPhase(index) {
+            guard let segment = RoundScript.congressSegment(index) else {
                 return try await send(system: Self.congressAmendmentSystemPrompt(config),
                                       messages: Self.apiMessages(from: history), maxTokens: 700)
             }
-            return try await send(system: Self.congressOpponentSystemPrompt(config, segment: segment),
+            return try await send(system: Self.congressSpeechSystemPrompt(config, segment: segment),
                                   messages: Self.apiMessages(from: history), maxTokens: segment.seconds >= 240 ? 1400 : 800)
         case .team:
             var messages = Self.apiMessages(from: history)
@@ -223,10 +226,7 @@ struct ClaudeClient {
         case .debate:
             prompt = "Resolution: \"\(config.topic)\"\nMode: \(config.mode.rawValue). Difficulty: \(config.difficulty.rawValue).\nThe student argued in favor of the resolution."
         case .congress:
-            prompt = "Committee: \(config.committee)\nLegislation: \(config.topic)\nThe student spoke in \(config.userSide == .affirmative ? "affirmation" : "negation") of the bill. Difficulty: \(config.difficulty.rawValue)."
-        }
-        if config.mode == .briefing {
-            prompt += "\nThis was a written briefing session: the student's turns are drafts and the editor's turns are sharpened rewrites. Review only the student's own drafts."
+            prompt = "Committee: \(config.committee)\nLegislation: \(config.topic)\nThe student spoke in \(config.userIsAuthor ? "affirmation of the bill as its sponsor, giving the authorship speech" : "negation of the bill, answering an AI sponsor who authored and defended it"). Difficulty: \(config.difficulty.rawValue)."
         }
         if config.mode == .team {
             prompt += "\nThis was a two-person team round: \(config.names(on: config.userSide)) argued the \(config.userSide.rawValue.lowercased()) together against an AI opposing team. The round included a crossfire in which the opposing team asked three questions and the human team answered them live. Review the human team's speeches and their crossfire answers, noting specifically how directly and completely each question was answered."

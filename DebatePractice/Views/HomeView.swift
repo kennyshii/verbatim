@@ -78,7 +78,7 @@ struct HomeView: View {
                     app.path.append(Route.congress)
                 } label: {
                     BigCard(icon: "building.columns.fill", title: "Model Congress",
-                            subtitle: "Every House and Senate committee, with briefings and practice legislation.")
+                            subtitle: "Sixteen committees, linked data sources, and timed rounds on real legislation.")
                 }
                 .buttonStyle(.plain)
 

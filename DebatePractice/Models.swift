@@ -18,7 +18,6 @@ enum PracticeKind: String, Codable, CaseIterable {
 enum SessionMode: String, CaseIterable, Identifiable, Codable {
     case debate = "Debate"
     case coach = "Coach"
-    case briefing = "Briefing"
     case versus = "1v1"
     case twoVtwo = "2v2"
     case team = "Team vs AI"
@@ -27,7 +26,7 @@ enum SessionMode: String, CaseIterable, Identifiable, Codable {
     var id: String { rawValue }
 
     static func options(for kind: PracticeKind) -> [SessionMode] {
-        kind == .debate ? [.debate, .coach, .briefing, .versus, .twoVtwo, .team] : [.congress]
+        kind == .debate ? [.debate, .coach, .versus, .twoVtwo, .team] : [.congress]
     }
 
     var isMultiplayer: Bool { self == .versus || self == .twoVtwo || self == .team }
@@ -38,7 +37,6 @@ enum SessionMode: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .debate: return "bubble.left.and.bubble.right"
         case .coach: return "graduationcap"
-        case .briefing: return "doc.text.magnifyingglass"
         case .versus: return "person.2"
         case .twoVtwo: return "person.3"
         case .team: return "person.2.badge.gearshape"
@@ -52,8 +50,6 @@ enum SessionMode: String, CaseIterable, Identifiable, Codable {
             return "Live back-and-forth. The AI argues the opposing side in real time; structured feedback comes after you end."
         case .coach:
             return "No opponent. The AI gives structured, critical feedback after each of your turns."
-        case .briefing:
-            return "Text-to-text. Write out your points and get back a sharpened version with what changed — no live opponent."
         case .versus:
             return "Debate another person — on this phone or online with a room code. An AI judge decides the round using the paradigm you pick."
         case .twoVtwo:
@@ -69,7 +65,6 @@ enum SessionMode: String, CaseIterable, Identifiable, Codable {
         switch self {
         case .debate: return "Opponent"
         case .coach: return "Coach"
-        case .briefing: return "Editor"
         case .versus: return "Judge"
         case .twoVtwo: return "Judge"
         case .team: return "Opposing team"
@@ -426,13 +421,16 @@ let committees: [Committee] = [
         bills: ["A Bill to Ban Individual Stock Trading by Members of Congress", "A Bill to Require Public Disclosure of All Privately Funded Congressional Travel"]),
 ]
 
+enum SpeechStance: String, Hashable {
+    case pro = "Pro"
+    case con = "Con"
+}
+
 struct CongressSegment: Hashable {
-    let slot: SpeechSlot
     let title: String
-    let stance: String
+    let stance: SpeechStance
     let seconds: Int
 
-    var isUser: Bool { slot != .ai }
     var wordBudget: Int { max(120, seconds * 150 / 60) }
 
     var clock: String {
@@ -467,6 +465,12 @@ struct PracticeConfig: Hashable {
     var plainLanguage: Bool = false
 
     var isJudged: Bool { mode.isJudged }
+
+    var userIsAuthor: Bool { userSide == .affirmative }
+
+    var userStance: SpeechStance { userSide == .affirmative ? .pro : .con }
+
+    func userSpeaks(_ stance: SpeechStance) -> Bool { stance == userStance }
 
     func names(on side: Side) -> String {
         let list = participants.filter { $0.side == side }.map(\.name)
@@ -524,21 +528,19 @@ struct ScriptStep: Hashable {
 
 enum RoundScript {
     static let congress: [CongressSegment] = [
-        CongressSegment(slot: .player(0), title: "Authorship speech", stance: "Pro", seconds: 120),
-        CongressSegment(slot: .ai, title: "Constructive", stance: "Con", seconds: 240),
-        CongressSegment(slot: .player(0), title: "Second speech", stance: "Pro", seconds: 120),
-        CongressSegment(slot: .ai, title: "Closing", stance: "Con", seconds: 120),
+        CongressSegment(title: "Authorship speech", stance: .pro, seconds: 120),
+        CongressSegment(title: "Constructive", stance: .con, seconds: 240),
+        CongressSegment(title: "Second speech", stance: .pro, seconds: 120),
+        CongressSegment(title: "Closing", stance: .con, seconds: 120),
     ]
 
-    static func congressSegment(_ n: Int) -> CongressSegment {
-        if n < congress.count { return congress[n] }
-        let k = n - congress.count
-        return k % 2 == 0
-            ? CongressSegment(slot: .ai, title: "Motion to amend", stance: "Con", seconds: 120)
-            : CongressSegment(slot: .player(0), title: "Response to the motion", stance: "Pro", seconds: 120)
+    static let floorSpeech = CongressSegment(title: "Floor speech", stance: .pro, seconds: 120)
+
+    static func congressSegment(_ n: Int) -> CongressSegment? {
+        n < congress.count ? congress[n] : nil
     }
 
-    static func congressIsAmendmentPhase(_ n: Int) -> Bool { n >= congress.count }
+    static func congressIsOpenFloor(_ n: Int) -> Bool { n >= congress.count }
 
     static let team: [ScriptStep] = [
         ScriptStep(slot: .player(0), kind: .speech),

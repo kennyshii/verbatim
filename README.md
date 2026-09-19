@@ -21,8 +21,6 @@ the Anthropic Messages API. No package dependencies.
   tap one to go straight into setup with it loaded.
 - **Debate** — the AI argues the opposing side live; structured feedback after you end.
 - **Coach** — no opponent; structured feedback after every turn.
-- **Briefing** — text-to-text. Send a draft of your points; get back a sharpened version and a list of
-  what changed. For tightening your writing rather than practicing delivery.
 - **1v1** — debate another person, on the same phone or **online with a six-character room code**.
 - **2v2** — Public Forum style, two on two. First speakers alternate, then second speakers. Same phone
   or online; each debater speaks from their own device when the banner names them.
@@ -33,6 +31,8 @@ the Anthropic Messages API. No package dependencies.
 - **Judges** — **Novice** and **Varsity** presets, each carrying a real sample reason for decision that the
   AI judge matches for voice, technical depth, and specificity, or write your own paradigm. The judge
   returns a decision, a reason for decision, and feedback for each side.
+
+Language is set once in **Settings → Language** and applies to every round and all feedback.
 
 ### Playing online
 Multiplayer rounds sync through the tiny relay in `server/` (Node 18+, zero dependencies):
@@ -56,9 +56,14 @@ rounds work between people who aren't in the same room. Set the relay's URL in S
   be checked against the links before you use it.
 - **Bill upload** — upload the actual legislation as PDF, DOCX, TXT, RTF, or Markdown. The text is read
   out of the file and handed to both the opposing member and the parliamentarian, or pick a preset bill.
-- **Round format** — 2:00 authorship (you) → 4:00 constructive (AI, opposed) → 2:00 second speech (you)
-  → 2:00 closing (AI). A live countdown runs on your speeches. Afterwards the floor opens to amendments,
-  which the AI moves and you answer.
+- **Round format** — 2:00 authorship → 4:00 constructive against it → 2:00 second speech → 2:00 closing,
+  with a live countdown on your speeches. **Who speaks depends on your side:** affirm the bill and you
+  are its sponsor, giving the authorship speech while the AI opposes; negate it (say you uploaded an
+  opponent's bill) and the AI becomes the sponsor, writing and defending the bill from the author's
+  perspective while you give the 4:00 constructive against it.
+- **Open floor** — after the four speeches you choose: take the floor again for another 2:00, or yield.
+  If you yield, the AI may move an amendment — but only when the debate actually warrants one; otherwise
+  it says so and lets the bill stand.
 - **Point of inquiry** — rise at any time to have something looked up or a procedural question settled.
   A **separate parliamentarian AI** — not your opponent — rules on it and names where to verify the
   answer. Inquiries go into the record but aren't scored as speeches.

@@ -6,12 +6,12 @@ struct DebateSetupView: View {
     @EnvironmentObject private var app: AppState
     @AppStorage("support.lowPressure") private var lowPressure = false
     @AppStorage("support.plainLanguage") private var plainLanguage = false
+    @AppStorage("prefs.language") private var languageRaw = Language.english.rawValue
 
     @State private var category: TopicCategory = topicCategories[0]
     @State private var useCustomTopic = false
     @State private var topicChoice: String = topicCategories[0].topics[0].text
     @State private var customTopic = ""
-    @State private var language: Language = .english
     @State private var difficulty: Difficulty = .medium
     @State private var mode: SessionMode = .debate
     @State private var showSettings = false
@@ -50,7 +50,6 @@ struct DebateSetupView: View {
 
     private var startLabel: String {
         switch mode {
-        case .briefing: return "Start Briefing"
         case .versus, .twoVtwo, .team: return online ? "Create room & get code" : "Start \(mode.rawValue)"
         default: return "Start Debate"
         }
@@ -64,7 +63,7 @@ struct DebateSetupView: View {
                 if mode.isMultiplayer { connectionSection }
                 if mode.isMultiplayer { sidesSection }
                 if mode.isJudged { judgeSection }
-                ChoiceSections(language: $language, difficulty: $difficulty)
+                ChoiceSections(difficulty: $difficulty)
 
                 if let createError {
                     Text(createError).font(.footnote).foregroundStyle(Theme.danger)
@@ -303,7 +302,7 @@ struct DebateSetupView: View {
             showSettings = true
             return
         }
-        var config = PracticeConfig(kind: .debate, topic: resolvedTopic, language: language, difficulty: difficulty, mode: mode)
+        var config = PracticeConfig(kind: .debate, topic: resolvedTopic, language: Language(rawValue: languageRaw) ?? .english, difficulty: difficulty, mode: mode)
         config.lowPressure = lowPressure
         config.plainLanguage = plainLanguage
         config.userSide = userSide
@@ -336,7 +335,6 @@ struct DebateSetupView: View {
 }
 
 struct ChoiceSections: View {
-    @Binding var language: Language
     @Binding var difficulty: Difficulty
 
     var body: some View {
@@ -350,15 +348,6 @@ struct ChoiceSections: View {
             Text(difficulty.explanation)
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-        }
-
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Language")
-            HStack(spacing: 8) {
-                ForEach(Language.allCases) { lang in
-                    Chip(label: lang.rawValue, selected: language == lang) { language = lang }
-                }
-            }
         }
     }
 }

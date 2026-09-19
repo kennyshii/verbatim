@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("support.plainLanguage") private var plainLanguage = false
     @AppStorage("support.showFillerMeter") private var showFillerMeter = true
     @AppStorage(RoomClient.serverKey) private var serverURL = ""
+    @AppStorage("prefs.language") private var languageRaw = Language.english.rawValue
 
     @State private var key: String = Keychain.loadAPIKey() ?? ""
 
@@ -21,6 +22,17 @@ struct SettingsView: View {
                     Section {
                         Text(message).foregroundStyle(Theme.danger)
                     }
+                }
+
+                Section {
+                    Picker("Language", selection: $languageRaw) {
+                        ForEach(Language.allCases) { Text($0.rawValue).tag($0.rawValue) }
+                    }
+                    Text("Every debate, congress round, and piece of feedback is written in this language.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("Language")
                 }
 
                 Section {

@@ -56,6 +56,7 @@ struct CommitteeDetailView: View {
     @EnvironmentObject private var app: AppState
     @AppStorage("support.lowPressure") private var lowPressure = false
     @AppStorage("support.plainLanguage") private var plainLanguage = false
+    @AppStorage("prefs.language") private var languageRaw = Language.english.rawValue
 
     @State private var billChoice: String = ""
     @State private var uploadedText = ""
@@ -66,7 +67,6 @@ struct CommitteeDetailView: View {
     @State private var importError: String?
     @State private var showStats = false
     @State private var side: Side = .affirmative
-    @State private var language: Language = .english
     @State private var difficulty: Difficulty = .medium
     @State private var showSettings = false
 
@@ -81,7 +81,7 @@ struct CommitteeDetailView: View {
                 referenceSection
                 legislationSection
                 sideSection
-                ChoiceSections(language: $language, difficulty: $difficulty)
+                ChoiceSections(difficulty: $difficulty)
                 formatSection
 
                 Button {
@@ -105,7 +105,7 @@ struct CommitteeDetailView: View {
             SettingsView(message: "Add an Anthropic API key to start a round.")
         }
         .sheet(isPresented: $showStats) {
-            StatLookupSheet(committee: committee, language: language)
+            StatLookupSheet(committee: committee, language: Language(rawValue: languageRaw) ?? .english)
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: DocumentText.allowedTypes) { result in
             handleImport(result)
@@ -243,7 +243,9 @@ struct CommitteeDetailView: View {
                     Chip(label: s == .affirmative ? "Affirm the bill" : "Negate the bill", selected: side == s) { side = s }
                 }
             }
-            Text("You give the authorship speech either way; the AI member always takes the opposing side.")
+            Text(side == .affirmative
+                 ? "You sponsor the bill and give the authorship speech. The AI member speaks against it."
+                 : "The AI member sponsors the bill and gives the authorship speech from the author's perspective. You speak against it — useful when you've uploaded an opponent's bill.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -254,14 +256,15 @@ struct CommitteeDetailView: View {
             SectionLabel(text: "Round format")
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(RoundScript.congress.enumerated()), id: \.offset) { index, segment in
+                    let mine = (segment.stance == .pro) == (side == .affirmative)
                     HStack(spacing: 10) {
                         Text("\(index + 1)")
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Color.white)
                             .frame(width: 20, height: 20)
-                            .background(segment.isUser ? Theme.accent : Color.secondary)
+                            .background(mine ? Theme.accent : Color.secondary)
                             .clipShape(Circle())
-                        Text(segment.isUser ? "You — \(segment.title)" : "AI member — \(segment.title)")
+                        Text("\(mine ? "You" : "AI member") — \(segment.title) (\(segment.stance.rawValue))")
                             .font(.subheadline)
                         Spacer(minLength: 0)
                         Text(segment.clock)
@@ -271,11 +274,11 @@ struct CommitteeDetailView: View {
                 }
                 Divider()
                 HStack(spacing: 10) {
-                    Image(systemName: "hand.raised")
+                    Image(systemName: "hand.wave")
                         .font(.caption)
                         .foregroundStyle(Theme.accent)
                         .frame(width: 20)
-                    Text("Then the AI moves amendments, which you respond to.")
+                    Text("Then you choose: speak again, or yield the floor and let the AI move an amendment if one is warranted.")
                         .font(.subheadline)
                 }
                 HStack(spacing: 10) {
@@ -314,7 +317,7 @@ struct CommitteeDetailView: View {
     private func start() {
         guard !resolvedBill.isEmpty else { return }
         guard app.hasAPIKey else { showSettings = true; return }
-        var config = PracticeConfig(kind: .congress, topic: resolvedBill, language: language, difficulty: difficulty, mode: .congress)
+        var config = PracticeConfig(kind: .congress, topic: resolvedBill, language: Language(rawValue: languageRaw) ?? .english, difficulty: difficulty, mode: .congress)
         config.userSide = side
         config.committee = committee.fullName
         config.lowPressure = lowPressure
