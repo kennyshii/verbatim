@@ -1,35 +1,41 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct CongressView: View {
     @State private var search = ""
 
-    private func filtered(_ chamber: Chamber) -> [Committee] {
-        committees.filter { $0.chamber == chamber && (search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) || $0.jurisdiction.localizedCaseInsensitiveContains(search)) }
+    private var filtered: [Committee] {
+        committees.filter {
+            search.isEmpty
+            || $0.name.localizedCaseInsensitiveContains(search)
+            || $0.jurisdiction.localizedCaseInsensitiveContains(search)
+        }
     }
 
     var body: some View {
         List {
             Section {
-                Text("Pick your committee. Each one has its jurisdiction, the agencies it oversees, where to find reliable numbers, an AI briefing you can save, and practice legislation to debate.")
+                Text("Pick your committee. Each one lists its jurisdiction, the agencies it oversees, links to the data sources members actually cite, and legislation to debate.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .listRowBackground(Color.clear)
             }
-            ForEach(Chamber.allCases, id: \.self) { chamber in
-                Section(chamber.rawValue) {
-                    ForEach(filtered(chamber)) { committee in
-                        NavigationLink(value: Route.committee(committee)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "building.columns")
+            Section("Committees") {
+                ForEach(filtered) { committee in
+                    NavigationLink(value: Route.committee(committee)) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "building.columns")
+                                .foregroundStyle(Theme.accent)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(committee.name)
+                                Text(committee.chamber)
+                                    .font(.caption2.weight(.semibold))
                                     .foregroundStyle(Theme.accent)
-                                    .frame(width: 24)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(committee.name)
-                                    Text(committee.jurisdiction)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                }
+                                Text(committee.jurisdiction)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
                             }
                         }
                     }
@@ -51,19 +57,21 @@ struct CommitteeDetailView: View {
     @AppStorage("support.lowPressure") private var lowPressure = false
     @AppStorage("support.plainLanguage") private var plainLanguage = false
 
-    @State private var briefing: String?
-    @State private var isGenerating = false
-    @State private var briefingError: String?
     @State private var billChoice: String = ""
-    @State private var useCustomBill = false
-    @State private var customBill = ""
+    @State private var uploadedText = ""
+    @State private var uploadedName = ""
+    @State private var uploadedTitle = ""
+    @State private var useUpload = false
+    @State private var showImporter = false
+    @State private var importError: String?
+    @State private var showStats = false
     @State private var side: Side = .affirmative
     @State private var language: Language = .english
     @State private var difficulty: Difficulty = .medium
     @State private var showSettings = false
 
     private var resolvedBill: String {
-        useCustomBill ? customBill.trimmingCharacters(in: .whitespacesAndNewlines) : billChoice
+        useUpload ? uploadedTitle : billChoice
     }
 
     var body: some View {
@@ -71,8 +79,21 @@ struct CommitteeDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
                 referenceSection
-                briefingSection
-                practiceSection
+                legislationSection
+                sideSection
+                ChoiceSections(language: $language, difficulty: $difficulty)
+                formatSection
+
+                Button {
+                    start()
+                } label: {
+                    Text("Start Congress Round")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(resolvedBill.isEmpty)
             }
             .padding(20)
         }
@@ -81,17 +102,20 @@ struct CommitteeDetailView: View {
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showSettings) {
-            SettingsView(message: "Add an Anthropic API key to use briefings and practice rounds.")
+            SettingsView(message: "Add an Anthropic API key to start a round.")
         }
-        .onAppear {
-            if billChoice.isEmpty { billChoice = committee.bills[0] }
-            briefing = try? app.sessions.briefing(for: committee)
+        .sheet(isPresented: $showStats) {
+            StatLookupSheet(committee: committee, language: language)
         }
+        .fileImporter(isPresented: $showImporter, allowedContentTypes: DocumentText.allowedTypes) { result in
+            handleImport(result)
+        }
+        .onAppear { if billChoice.isEmpty { billChoice = committee.bills[0] } }
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(committee.chamber.rawValue).font(.caption).foregroundStyle(.secondary)
+            Text(committee.chamber).font(.caption).foregroundStyle(.secondary)
             Text(committee.fullName).font(.title3.weight(.semibold)).foregroundStyle(Theme.accent)
             Text(committee.jurisdiction).font(.subheadline)
         }
@@ -106,9 +130,160 @@ struct CommitteeDetailView: View {
             FlowChips(items: committee.agencies)
 
             SectionLabel(text: "Where to find reliable numbers").padding(.top, 6)
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(committee.sources, id: \.self) { source in
-                    Label(source, systemImage: "checkmark.seal")
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(committee.sources.enumerated()), id: \.element.id) { index, source in
+                    if index > 0 { Divider() }
+                    Link(destination: URL(string: source.url) ?? URL(string: "https://www.congress.gov")!) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "link")
+                                .font(.footnote)
+                                .foregroundStyle(Theme.accent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(source.title)
+                                    .font(.subheadline)
+                                    .foregroundStyle(Color.primary)
+                                Text(source.url.replacingOccurrences(of: "https://", with: ""))
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.footnote)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.vertical, 10)
+                        .contentShape(Rectangle())
+                    }
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
+
+            Button {
+                guard app.hasAPIKey else { showSettings = true; return }
+                showStats = true
+            } label: {
+                Label("Look up a statistic", systemImage: "chart.bar.doc.horizontal")
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.bordered)
+            .tint(Theme.accent)
+            Text("Pull a figure for this committee's area with its source, so you can check it before using it at the podium.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var legislationSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Legislation to debate")
+            ForEach(committee.bills, id: \.self) { bill in
+                OptionCard(title: bill, selected: !useUpload && billChoice == bill) {
+                    useUpload = false
+                    billChoice = bill
+                }
+            }
+
+            OptionCard(title: uploadedName.isEmpty ? "Upload a bill" : uploadedTitle,
+                       subtitle: uploadedName.isEmpty
+                        ? "PDF, DOCX, TXT, RTF, or Markdown. The text is read and given to your opponent and the parliamentarian."
+                        : "\(uploadedName) · \(uploadedText.count) characters read",
+                       icon: "doc.badge.arrow.up",
+                       selected: useUpload) {
+                if uploadedText.isEmpty { showImporter = true } else { useUpload = true }
+            }
+
+            HStack(spacing: 10) {
+                Button(uploadedText.isEmpty ? "Choose file" : "Replace file") { showImporter = true }
+                    .buttonStyle(.bordered)
+                    .tint(Theme.accent)
+                if !uploadedText.isEmpty {
+                    Button("Remove", role: .destructive) {
+                        uploadedText = ""
+                        uploadedName = ""
+                        uploadedTitle = ""
+                        useUpload = false
+                    }
+                    .buttonStyle(.bordered)
+                }
+            }
+
+            if let importError {
+                Text(importError).font(.footnote).foregroundStyle(Theme.danger)
+            }
+
+            if useUpload && !uploadedText.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Bill title used in the round").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    TextField("A Bill to…", text: $uploadedTitle, axis: .vertical)
+                        .lineLimit(1...3)
+                        .padding(10)
+                        .card()
+                    DisclosureGroup("Preview the text that was read") {
+                        Text(uploadedText.prefix(1500) + (uploadedText.count > 1500 ? "…" : ""))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                            .padding(.top, 6)
+                    }
+                    .font(.caption.weight(.semibold))
+                    .tint(Theme.accent)
+                }
+            }
+        }
+    }
+
+    private var sideSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Your side")
+            HStack(spacing: 8) {
+                ForEach(Side.allCases) { s in
+                    Chip(label: s == .affirmative ? "Affirm the bill" : "Negate the bill", selected: side == s) { side = s }
+                }
+            }
+            Text("You give the authorship speech either way; the AI member always takes the opposing side.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var formatSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Round format")
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(RoundScript.congress.enumerated()), id: \.offset) { index, segment in
+                    HStack(spacing: 10) {
+                        Text("\(index + 1)")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Color.white)
+                            .frame(width: 20, height: 20)
+                            .background(segment.isUser ? Theme.accent : Color.secondary)
+                            .clipShape(Circle())
+                        Text(segment.isUser ? "You — \(segment.title)" : "AI member — \(segment.title)")
+                            .font(.subheadline)
+                        Spacer(minLength: 0)
+                        Text(segment.clock)
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Divider()
+                HStack(spacing: 10) {
+                    Image(systemName: "hand.raised")
+                        .font(.caption)
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 20)
+                    Text("Then the AI moves amendments, which you respond to.")
+                        .font(.subheadline)
+                }
+                HStack(spacing: 10) {
+                    Image(systemName: "questionmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(Theme.accent)
+                        .frame(width: 20)
+                    Text("Rise to a point of inquiry any time — a separate parliamentarian AI answers it.")
                         .font(.subheadline)
                 }
             }
@@ -118,103 +293,21 @@ struct CommitteeDetailView: View {
         }
     }
 
-    private var briefingSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                SectionLabel(text: "Committee briefing")
-                Spacer()
-                if let briefing {
-                    ReadAloudButton(text: briefing, language: .english)
-                }
-            }
-            if isGenerating {
-                ProgressView("Preparing briefing…")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 20)
-            } else if let briefing {
-                Text(briefing)
-                    .font(.subheadline)
-                    .textSelection(.enabled)
-                    .padding(12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .card()
-                Text("Numbers marked (verify) are approximate — check them against the sources above before you cite them at the podium.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button("Regenerate briefing") { generate() }
-                    .buttonStyle(.bordered)
-                    .tint(Theme.accent)
-            } else {
-                Text("Get a saved briefing: the live policy fights in this committee, the strongest argument on each side, figures worth knowing, and where to verify them.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                Button("Generate briefing") { generate() }
-                    .buttonStyle(.borderedProminent)
-            }
-            if let briefingError {
-                Text(briefingError).font(.footnote).foregroundStyle(Theme.danger)
-            }
-        }
-    }
-
-    private var practiceSection: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "Legislation to debate")
-                ForEach(committee.bills, id: \.self) { bill in
-                    OptionCard(title: bill, selected: !useCustomBill && billChoice == bill) {
-                        useCustomBill = false
-                        billChoice = bill
-                    }
-                }
-                OptionCard(title: "Write my own bill", subtitle: useCustomBill ? nil : "Any title in the form \"A Bill to…\"", icon: "pencil", selected: useCustomBill) {
-                    useCustomBill = true
-                }
-                if useCustomBill {
-                    TextField("A Bill to…", text: $customBill, axis: .vertical)
-                        .lineLimit(1...3)
-                        .padding(12)
-                        .card()
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 10) {
-                SectionLabel(text: "Your side")
-                HStack(spacing: 8) {
-                    ForEach(Side.allCases) { s in
-                        Chip(label: s == .affirmative ? "Affirm the bill" : "Negate the bill", selected: side == s) { side = s }
-                    }
-                }
-            }
-
-            ChoiceSections(language: $language, difficulty: $difficulty)
-
-            Button {
-                start()
-            } label: {
-                Text("Start Congress Round")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(resolvedBill.isEmpty)
-        }
-    }
-
-    private func generate() {
-        guard app.hasAPIKey else { showSettings = true; return }
-        isGenerating = true
-        briefingError = nil
-        Task {
+    private func handleImport(_ result: Result<URL, Error>) {
+        importError = nil
+        switch result {
+        case .failure(let error):
+            importError = error.localizedDescription
+        case .success(let url):
             do {
-                let text = try await app.claude.committeeBriefing(committee)
-                try app.sessions.saveBriefing(text, for: committee)
-                briefing = text
+                let text = try DocumentText.extract(from: url)
+                uploadedText = text
+                uploadedName = url.lastPathComponent
+                uploadedTitle = DocumentText.suggestedTitle(from: text, filename: url.lastPathComponent)
+                useUpload = true
             } catch {
-                briefingError = error.localizedDescription
+                importError = error.localizedDescription
             }
-            isGenerating = false
         }
     }
 
@@ -226,7 +319,142 @@ struct CommitteeDetailView: View {
         config.committee = committee.fullName
         config.lowPressure = lowPressure
         config.plainLanguage = plainLanguage
+        if useUpload {
+            config.billText = uploadedText
+            config.billFilename = uploadedName
+        }
         app.path.append(Route.session(config))
+    }
+}
+
+struct StatLookupSheet: View {
+    let committee: Committee
+    var language: Language = .english
+
+    @EnvironmentObject private var app: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var question = ""
+    @State private var answer: String?
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Ask for a number in this committee's area. You'll get the figure, how to use it, and the source that publishes it.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+
+                    TextField("e.g. How many satellites are in orbit right now?", text: $question, axis: .vertical)
+                        .lineLimit(1...3)
+                        .padding(12)
+                        .card()
+
+                    Button {
+                        lookUp()
+                    } label: {
+                        Text(isLoading ? "Looking it up…" : "Look it up")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(isLoading || question.trimmingCharacters(in: .whitespaces).isEmpty)
+
+                    if answer == nil && !isLoading {
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionLabel(text: "Suggested for this committee")
+                            ForEach(committee.statSuggestions, id: \.self) { suggestion in
+                                Button {
+                                    question = suggestion
+                                    lookUp()
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "sparkle.magnifyingglass")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.accent)
+                                        Text(suggestion)
+                                            .font(.subheadline)
+                                            .foregroundStyle(Color.primary)
+                                            .multilineTextAlignment(.leading)
+                                        Spacer(minLength: 0)
+                                    }
+                                    .padding(10)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .card()
+                                    .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    if let errorMessage {
+                        Text(errorMessage).font(.footnote).foregroundStyle(Theme.danger)
+                    }
+
+                    if let answer {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                SectionLabel(text: "Result")
+                                Spacer()
+                                ReadAloudButton(text: answer, language: language)
+                            }
+                            Text(answer)
+                                .font(.subheadline)
+                                .textSelection(.enabled)
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .card()
+
+                        Text("This comes from the model's training data, not a live feed — anything marked (verify) should be checked against the source links before you use it in a round.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        SectionLabel(text: "Check it here")
+                        ForEach(committee.sources) { source in
+                            Link(destination: URL(string: source.url) ?? URL(string: "https://www.congress.gov")!) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "link").font(.caption).foregroundStyle(Theme.accent)
+                                    Text(source.title).font(.subheadline).foregroundStyle(Color.primary)
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "arrow.up.right.square").font(.caption).foregroundStyle(.tertiary)
+                                }
+                                .padding(10)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .card()
+                                .contentShape(Rectangle())
+                            }
+                        }
+                    }
+                }
+                .padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle("Look up a statistic")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+            }
+        }
+    }
+
+    private func lookUp() {
+        let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        isLoading = true
+        errorMessage = nil
+        answer = nil
+        Task {
+            do {
+                answer = try await app.claude.lookUpStatistic(text, committee: committee, language: language)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isLoading = false
+        }
     }
 }
 

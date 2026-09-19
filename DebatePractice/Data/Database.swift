@@ -47,14 +47,6 @@ final class Database {
             )
             """,
             """
-            CREATE TABLE IF NOT EXISTS briefings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                committee TEXT NOT NULL UNIQUE,
-                content TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """,
-            """
             CREATE TABLE IF NOT EXISTS streaks (
                 user_id INTEGER PRIMARY KEY REFERENCES users(id),
                 current_streak INTEGER NOT NULL DEFAULT 0,

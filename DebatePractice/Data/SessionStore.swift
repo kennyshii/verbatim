@@ -100,21 +100,6 @@ struct SessionStore {
         )
     }
 
-    func briefing(for committee: Committee) throws -> String? {
-        try db.query("SELECT content FROM briefings WHERE committee = ?", [committee.id]).first?["content"] as? String
-    }
-
-    func saveBriefing(_ content: String, for committee: Committee) throws {
-        let now = ISO8601DateFormatter().string(from: Date())
-        try db.exec(
-            """
-            INSERT INTO briefings (committee, content, created_at) VALUES (?, ?, ?)
-            ON CONFLICT(committee) DO UPDATE SET content = excluded.content, created_at = excluded.created_at
-            """,
-            [committee.id, content, now]
-        )
-    }
-
     static func dayString(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = .current

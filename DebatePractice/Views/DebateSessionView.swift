@@ -13,11 +13,31 @@ struct PracticeSessionView: View {
     @State private var errorMessage: String?
     @State private var showEndConfirm = false
     @State private var ready = false
+    @State private var remaining = 0
+    @State private var timerRunning = false
+    @State private var showInquiry = false
+    @State private var inquiryText = ""
+    @State private var inquiryPending = false
+
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var userName: String { app.currentUser?.username ?? "You" }
 
     private var teamStep: ScriptStep? {
         config.mode == .team ? RoundScript.teamStep(messages.count) : nil
+    }
+
+    private var congressIndex: Int {
+        messages.filter { $0.effectiveKind == .speech || $0.effectiveKind == .amendment }.count
+    }
+
+    private var congressSegment: CongressSegment? {
+        config.mode == .congress ? RoundScript.congressSegment(congressIndex) : nil
+    }
+
+    private var clockText: String {
+        let value = max(0, remaining)
+        return String(format: "%d:%02d", value / 60, value % 60)
     }
 
     private var currentParticipant: Participant? {
@@ -30,7 +50,8 @@ struct PracticeSessionView: View {
     }
 
     private var awaitingAI: Bool {
-        teamStep?.slot == .ai
+        if let segment = congressSegment { return segment.slot == .ai }
+        return teamStep?.slot == .ai
     }
 
     private var crossfirePrompt: (index: Int, total: Int, text: String)? {
@@ -45,6 +66,10 @@ struct PracticeSessionView: View {
 
     private var canSend: Bool {
         !isThinking && !awaitingAI && !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var isCongressUserTurn: Bool {
+        congressSegment.map { $0.slot != .ai } ?? false
     }
 
     private var endLabel: String {
@@ -96,17 +121,37 @@ struct PracticeSessionView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
+            if config.mode == .congress {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showInquiry = true } label: { Image(systemName: "hand.raised") }
+                        .accessibilityLabel("Point of inquiry")
+                        .disabled(isThinking || inquiryPending)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(endLabel) { endTapped() }
                     .disabled(isThinking)
             }
         }
+        .sheet(isPresented: $showInquiry) {
+            InquirySheet(text: $inquiryText, pending: inquiryPending) { question in
+                askInquiry(question)
+            }
+        }
+        .onReceive(ticker) { _ in
+            guard timerRunning, isCongressUserTurn else { return }
+            remaining -= 1
+        }
+        .onChange(of: congressIndex) { resetClock() }
         .confirmationDialog(config.isJudged ? "End the round and send it to the judge?" : "End this session and get your feedback?",
                             isPresented: $showEndConfirm, titleVisibility: .visible) {
             Button(endLabel) { finish() }
             Button("Keep going", role: .cancel) {}
         }
-        .task { advanceIfAITurn() }
+        .task {
+            resetClock()
+            advanceIfAITurn()
+        }
         .onDisappear { Speaker.shared.stop() }
     }
 
@@ -134,6 +179,24 @@ struct PracticeSessionView: View {
                 .background(Theme.sand)
                 .clipShape(Capsule())
                 .accessibilityAddTraits(.isHeader)
+            } else if let segment = congressSegment {
+                HStack(spacing: 6) {
+                    Image(systemName: segment.slot == .ai ? "person.wave.2.fill" : "mic.fill")
+                    Text(segment.slot == .ai
+                         ? "AI member — \(segment.title) (\(segment.stance), \(segment.clock))"
+                         : "You — \(segment.title) (\(segment.stance))")
+                    if segment.slot != .ai {
+                        Text(remaining <= 0 && timerRunning ? "over time" : clockText)
+                            .font(.caption.monospacedDigit().weight(.bold))
+                            .foregroundStyle(remaining <= 0 && timerRunning ? Theme.danger : Theme.sandText)
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.sandText)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Theme.sand)
+                .clipShape(Capsule())
             } else {
                 Text("\(config.mode.rawValue) · \(config.difficulty.rawValue) · \(config.language.rawValue)")
                     .font(.caption)
@@ -208,7 +271,7 @@ struct PracticeSessionView: View {
                                 .font(.footnote)
                                 .foregroundStyle(Theme.danger)
                             if !config.isJudged {
-                                Button("Retry") { config.mode == .team ? advanceIfAITurn() : requestReply() }
+                                Button("Retry") { config.mode == .team || config.mode == .congress ? advanceIfAITurn() : requestReply() }
                                     .buttonStyle(.bordered)
                             }
                         }
@@ -253,6 +316,12 @@ struct PracticeSessionView: View {
             if showFillerMeter && !input.isEmpty {
                 MeterBar(metrics: SpeechMetrics.analyze(input), compact: true)
             }
+            if inquiryPending {
+                Label("The parliamentarian is looking that up…", systemImage: "hand.raised")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .padding(12)
         .background(Theme.surface)
@@ -267,14 +336,18 @@ struct PracticeSessionView: View {
         guard canSend else { return }
         input = ""
         let message: ChatMessage
-        if let p = currentParticipant {
+        if config.mode == .congress {
+            let kind: MessageKind = RoundScript.congressIsAmendmentPhase(congressIndex) ? .amendment : .speech
+            message = ChatMessage(role: .user, text: text, speaker: userName, kind: kind)
+        } else if let p = currentParticipant {
             message = ChatMessage(role: p.isUser ? .user : .assistant, text: text, speaker: p.name, kind: teamStep?.kind ?? .speech)
         } else {
             message = ChatMessage(role: .user, text: text, speaker: userName, kind: .speech)
         }
         messages.append(message)
-        if config.mode != .briefing && message.effectiveKind == .speech { runStatCheck(for: message) }
-        if config.mode == .team {
+        if config.mode != .briefing && message.effectiveKind != .inquiry { runStatCheck(for: message) }
+        if config.mode == .team || config.mode == .congress {
+            timerRunning = false
             advanceIfAITurn()
         } else if !config.isJudged {
             requestReply()
@@ -282,8 +355,41 @@ struct PracticeSessionView: View {
     }
 
     private func advanceIfAITurn() {
+        if config.mode == .congress {
+            guard !isThinking, congressSegment?.slot == .ai, !messages.isEmpty else { return }
+            requestReply()
+            return
+        }
         guard config.mode == .team, !isThinking, let step = teamStep, step.slot == .ai else { return }
         if step.kind == .crossfireQuestion { requestCrossfire() } else { requestReply() }
+    }
+
+    private func resetClock() {
+        guard let segment = congressSegment, segment.slot != .ai else {
+            timerRunning = false
+            return
+        }
+        remaining = segment.seconds
+        timerRunning = true
+    }
+
+    private func askInquiry(_ question: String) {
+        let text = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        inquiryPending = true
+        showInquiry = false
+        inquiryText = ""
+        messages.append(ChatMessage(role: .user, text: text, speaker: userName, kind: .inquiry))
+        Task {
+            do {
+                let ruling = try await app.claude.pointOfInquiry(config: config, question: text, history: messages)
+                messages.append(ChatMessage(role: .assistant, text: ruling, speaker: "Parliamentarian", kind: .ruling))
+                if readAloud { Speaker.shared.speak(ruling, language: config.language) }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            inquiryPending = false
+        }
     }
 
     private func requestCrossfire() {
@@ -319,7 +425,8 @@ struct PracticeSessionView: View {
             do {
                 let reply = try await app.claude.liveTurn(config: config, history: messages)
                 let speaker = config.mode == .team ? "Opposing team" : config.mode.assistantLabel
-                messages.append(ChatMessage(role: .assistant, text: reply, speaker: speaker, kind: .speech))
+                let kind: MessageKind = config.mode == .congress && RoundScript.congressIsAmendmentPhase(congressIndex) ? .amendment : .speech
+                messages.append(ChatMessage(role: .assistant, text: reply, speaker: speaker, kind: kind))
                 if readAloud { Speaker.shared.speak(reply, language: config.language) }
             } catch {
                 errorMessage = error.localizedDescription
@@ -352,6 +459,49 @@ struct PracticeSessionView: View {
     }
 }
 
+struct InquirySheet: View {
+    @Binding var text: String
+    var pending: Bool
+    var onSubmit: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Rise to a point of inquiry. A separate parliamentarian AI — not your opponent — will rule on it or look it up, then tell you where to verify the answer.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    TextField("e.g. What is the current federal deficit? Or: is a motion to amend in order right now?", text: $text, axis: .vertical)
+                        .lineLimit(2...6)
+                        .padding(12)
+                        .card()
+                    Button {
+                        onSubmit(text)
+                    } label: {
+                        Text("Rise to inquiry")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(pending || text.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Text("Inquiries and rulings go into the record but are not scored as speeches.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(20)
+            }
+            .background(Theme.background)
+            .navigationTitle("Point of inquiry")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            }
+        }
+    }
+}
+
 struct MessageBubble: View {
     let message: ChatMessage
     let mode: SessionMode
@@ -366,7 +516,12 @@ struct MessageBubble: View {
     }
 
     private var isHumanSpeech: Bool {
-        isUser || (mode.isJudged && message.role == .assistant)
+        guard message.effectiveKind != .inquiry, message.effectiveKind != .ruling else { return false }
+        return isUser || (mode.isJudged && message.role == .assistant)
+    }
+
+    private var isProcedural: Bool {
+        message.effectiveKind == .inquiry || message.effectiveKind == .ruling
     }
 
     var body: some View {
@@ -384,7 +539,15 @@ struct MessageBubble: View {
                     }
                 }
 
-                if message.effectiveKind == .crossfireQuestion {
+                if isProcedural {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(message.effectiveKind == .inquiry ? "Point of inquiry" : "The chair rules",
+                              systemImage: message.effectiveKind == .inquiry ? "hand.raised" : "gavel")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(message.effectiveKind == .inquiry ? Color.white.opacity(0.9) : Theme.accent)
+                        Text(message.text).textSelection(.enabled)
+                    }
+                } else if message.effectiveKind == .crossfireQuestion {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Crossfire", systemImage: "questionmark.bubble")
                             .font(.caption.weight(.semibold))

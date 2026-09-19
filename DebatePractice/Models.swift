@@ -213,65 +213,234 @@ let suggestedResolutions: [String] = [
     "Resolved: In a democracy, a candidate for public office’s right to privacy ought to be valued above the public’s right to know.",
 ]
 
-enum Chamber: String, CaseIterable, Codable {
-    case house = "House of Representatives"
-    case senate = "Senate"
+struct SourceLink: Identifiable, Hashable {
+    let title: String
+    let url: String
+    var id: String { url }
 }
 
 struct Committee: Identifiable, Hashable {
-    let chamber: Chamber
     let name: String
+    let chamber: String
     let jurisdiction: String
     let agencies: [String]
-    let sources: [String]
+    let sources: [SourceLink]
+    let statSuggestions: [String]
     let bills: [String]
-    var id: String { "\(chamber.rawValue) — \(name)" }
-    var fullName: String { "\(chamber == .house ? "House" : "Senate") Committee on \(name)" }
+
+    var id: String { name }
+    var fullName: String { "Committee on \(name)" }
 }
 
 let committees: [Committee] = [
-    Committee(chamber: .house, name: "Agriculture", jurisdiction: "Farm programs, crop insurance, commodity markets, nutrition assistance including SNAP, rural development, forestry, and agricultural research.", agencies: ["USDA", "Commodity Futures Trading Commission", "Farm Credit Administration"], sources: ["USDA Economic Research Service", "USDA National Agricultural Statistics Service", "CBO farm bill baseline", "CRS reports"], bills: ["A Bill to Expand SNAP Eligibility for College Students", "A Bill to Cap Federal Crop Insurance Subsidies for Large Farms"]),
-    Committee(chamber: .house, name: "Appropriations", jurisdiction: "Annual discretionary spending bills that fund every federal department and agency.", agencies: ["Office of Management and Budget", "every executive department"], sources: ["Congressional Budget Office", "OMB Historical Tables", "Appropriations committee reports", "GAO"], bills: ["A Bill to Reduce Discretionary Spending by Five Percent Across All Agencies", "A Bill to Fully Fund the Federal Pell Grant Program"]),
-    Committee(chamber: .house, name: "Armed Services", jurisdiction: "The Department of Defense, military pay and readiness, weapons procurement, and the annual National Defense Authorization Act.", agencies: ["Department of Defense", "Army, Navy, Air Force, Marine Corps, Space Force"], sources: ["DoD Comptroller budget materials", "CBO defense analyses", "GAO weapon systems assessments", "CRS"], bills: ["A Bill to Raise Base Pay for Junior Enlisted Service Members", "A Bill to Require Congressional Approval for Overseas Troop Deployments Beyond 90 Days"]),
-    Committee(chamber: .house, name: "Budget", jurisdiction: "The annual congressional budget resolution, spending and revenue targets, and enforcement of budget rules.", agencies: ["Congressional Budget Office", "Office of Management and Budget"], sources: ["CBO Budget and Economic Outlook", "CBO Long-Term Budget Outlook", "Treasury Monthly Statement"], bills: ["A Bill to Adopt a Balanced Budget Requirement Over Ten Years", "A Bill to Establish an Independent Fiscal Commission"]),
-    Committee(chamber: .house, name: "Education and Workforce", jurisdiction: "K-12 and higher education, student loans, job training, labor standards, wages, workplace safety, and pensions.", agencies: ["Department of Education", "Department of Labor", "National Labor Relations Board"], sources: ["National Center for Education Statistics", "Bureau of Labor Statistics", "Federal Student Aid data center", "OSHA statistics"], bills: ["A Bill to Raise the Federal Minimum Wage", "A Bill to Make Community College Tuition-Free"]),
-    Committee(chamber: .house, name: "Energy and Commerce", jurisdiction: "Health care, energy, environment, telecommunications, consumer protection, and interstate commerce — the broadest House jurisdiction.", agencies: ["HHS", "Department of Energy", "EPA", "FCC", "FTC", "FDA"], sources: ["Energy Information Administration", "CMS National Health Expenditure data", "CDC National Center for Health Statistics", "FCC broadband maps"], bills: ["A Bill to Allow Medicare to Negotiate All Prescription Drug Prices", "A Bill to Require a Federal Online Data Privacy Standard"]),
-    Committee(chamber: .house, name: "Ethics", jurisdiction: "Standards of conduct for House members and staff, financial disclosure, gifts, and travel.", agencies: ["Office of Congressional Conduct"], sources: ["House Ethics Manual", "Financial disclosure database", "Office of Congressional Conduct reports"], bills: ["A Bill to Ban Individual Stock Trading by Members of Congress", "A Bill to Require Public Disclosure of All Privately Funded Congressional Travel"]),
-    Committee(chamber: .house, name: "Financial Services", jurisdiction: "Banking, securities, insurance, housing, the Federal Reserve, and international finance.", agencies: ["Federal Reserve", "Treasury", "SEC", "FDIC", "HUD", "CFPB"], sources: ["Federal Reserve FRED database", "FDIC Quarterly Banking Profile", "HUD Annual Homelessness Assessment Report", "SEC data"], bills: ["A Bill to Cap Credit Card Interest Rates", "A Bill to Expand the Low-Income Housing Tax Credit"]),
-    Committee(chamber: .house, name: "Foreign Affairs", jurisdiction: "Foreign policy, foreign aid, arms sales, treaties as they touch the House, and international organizations.", agencies: ["Department of State", "USAID", "Peace Corps"], sources: ["State Department Congressional Budget Justification", "CRS foreign assistance reports", "USAspending.gov", "UN and World Bank data"], bills: ["A Bill to Condition Military Aid on Human Rights Benchmarks", "A Bill to Increase Global Health Assistance"]),
-    Committee(chamber: .house, name: "Homeland Security", jurisdiction: "The Department of Homeland Security, border security, transportation security, cybersecurity, and emergency management.", agencies: ["DHS", "CBP", "TSA", "FEMA", "CISA", "Coast Guard"], sources: ["DHS Office of Homeland Security Statistics", "CBP monthly encounter data", "FEMA disaster declarations database", "GAO"], bills: ["A Bill to Increase Funding for Border Technology Over Physical Barriers", "A Bill to Create a National Cybersecurity Reserve Corps"]),
-    Committee(chamber: .house, name: "House Administration", jurisdiction: "Federal elections, the Library of Congress, the Smithsonian, and House operations and security.", agencies: ["Federal Election Commission", "Election Assistance Commission", "Library of Congress"], sources: ["FEC campaign finance data", "EAC Election Administration and Voting Survey", "Census voting and registration tables"], bills: ["A Bill to Require Paper Ballots in All Federal Elections", "A Bill to Establish Automatic Voter Registration"]),
-    Committee(chamber: .house, name: "Judiciary", jurisdiction: "Federal courts, criminal justice, immigration, civil liberties, antitrust, intellectual property, and constitutional amendments.", agencies: ["Department of Justice", "FBI", "Bureau of Prisons", "USCIS", "Federal judiciary"], sources: ["Bureau of Justice Statistics", "FBI crime data explorer", "U.S. Sentencing Commission", "DHS immigration statistics yearbook"], bills: ["A Bill to Eliminate Mandatory Minimum Sentences for Nonviolent Drug Offenses", "A Bill to Create a Pathway to Citizenship for Dreamers"]),
-    Committee(chamber: .house, name: "Natural Resources", jurisdiction: "Public lands, national parks, water and power, fisheries and wildlife, mining, tribal affairs, and U.S. territories.", agencies: ["Department of the Interior", "Bureau of Land Management", "National Park Service", "Bureau of Indian Affairs"], sources: ["Interior budget justifications", "USGS mineral commodity summaries", "National Park Service visitation statistics", "CRS public lands reports"], bills: ["A Bill to Ban New Oil and Gas Leasing on Federal Lands", "A Bill to Grant Statehood to Puerto Rico"]),
-    Committee(chamber: .house, name: "Oversight and Government Reform", jurisdiction: "Government-wide oversight, the federal workforce, the Postal Service, the census, and the District of Columbia.", agencies: ["Office of Personnel Management", "General Services Administration", "U.S. Postal Service", "Census Bureau"], sources: ["GAO High-Risk List", "OPM FedScope workforce data", "Inspector General reports", "Postal Service financial reports"], bills: ["A Bill to Make Washington, D.C. the Fifty-First State", "A Bill to Reform the Federal Hiring Process"]),
-    Committee(chamber: .house, name: "Rules", jurisdiction: "Sets the terms of floor debate for every major bill and governs House procedure.", agencies: ["House Parliamentarian"], sources: ["House Rules and Manual", "CRS legislative process reports"], bills: ["A Bill to Require 72 Hours of Public Notice Before Any Floor Vote", "A Bill to Guarantee an Open Amendment Process for Appropriations Bills"]),
-    Committee(chamber: .house, name: "Science, Space, and Technology", jurisdiction: "Non-defense scientific research, NASA, NSF, NIST, NOAA research, energy research, and STEM education.", agencies: ["NASA", "National Science Foundation", "NIST", "NOAA", "DOE Office of Science"], sources: ["NSF National Center for Science and Engineering Statistics", "NASA budget requests", "OSTP reports", "AAAS R&D budget analysis"], bills: ["A Bill to Double Federal Basic Research Funding Over Five Years", "A Bill to Establish a National Artificial Intelligence Safety Institute"]),
-    Committee(chamber: .house, name: "Small Business", jurisdiction: "The Small Business Administration, small business lending, contracting, and regulatory burden.", agencies: ["Small Business Administration"], sources: ["SBA Office of Advocacy small business profiles", "Census Bureau Business Dynamics Statistics", "Federal Reserve Small Business Credit Survey"], bills: ["A Bill to Expand SBA Microloans for First-Time Entrepreneurs", "A Bill to Simplify Federal Contracting for Small Businesses"]),
-    Committee(chamber: .house, name: "Transportation and Infrastructure", jurisdiction: "Highways, transit, aviation, rail, ports and waterways, pipelines, the Coast Guard, and public buildings.", agencies: ["Department of Transportation", "FAA", "Federal Highway Administration", "Amtrak", "Army Corps of Engineers"], sources: ["Bureau of Transportation Statistics", "FHWA Highway Statistics", "NHTSA traffic safety facts", "ASCE Infrastructure Report Card"], bills: ["A Bill to Fund High-Speed Rail Corridors", "A Bill to Raise the Federal Gas Tax and Index It to Inflation"]),
-    Committee(chamber: .house, name: "Veterans' Affairs", jurisdiction: "Veterans' health care, disability compensation, education benefits, and the Department of Veterans Affairs.", agencies: ["Department of Veterans Affairs", "Veterans Health Administration", "Veterans Benefits Administration"], sources: ["VA National Center for Veterans Analysis and Statistics", "VA budget submissions", "VA Office of Inspector General", "GAO"], bills: ["A Bill to Expand Community Care Options for Rural Veterans", "A Bill to Guarantee Mental Health Appointments Within Seven Days"]),
-    Committee(chamber: .house, name: "Ways and Means", jurisdiction: "Taxes, tariffs and trade, Social Security, Medicare, and welfare programs.", agencies: ["Treasury", "IRS", "Social Security Administration", "CMS", "U.S. Trade Representative"], sources: ["Joint Committee on Taxation estimates", "IRS Statistics of Income", "Social Security Trustees Report", "Medicare Trustees Report", "Census income and poverty tables"], bills: ["A Bill to Raise the Social Security Payroll Tax Cap", "A Bill to Expand the Child Tax Credit"]),
-    Committee(chamber: .house, name: "Permanent Select Committee on Intelligence", jurisdiction: "Oversight of the intelligence community, intelligence budgets, and surveillance authorities.", agencies: ["Office of the Director of National Intelligence", "CIA", "NSA", "FBI intelligence programs"], sources: ["ODNI Annual Threat Assessment", "ODNI statistical transparency reports", "Privacy and Civil Liberties Oversight Board reports"], bills: ["A Bill to Require Warrants for Surveillance of Americans' Communications", "A Bill to Increase Public Reporting on Intelligence Spending"]),
-    Committee(chamber: .senate, name: "Agriculture, Nutrition, and Forestry", jurisdiction: "Farm programs, food and nutrition programs, forestry, rural development, and commodity markets.", agencies: ["USDA", "Commodity Futures Trading Commission", "U.S. Forest Service"], sources: ["USDA Economic Research Service", "USDA Food and Nutrition Service program data", "CBO", "CRS"], bills: ["A Bill to Reform Commodity Payment Limits", "A Bill to Expand Universal Free School Meals"]),
-    Committee(chamber: .senate, name: "Appropriations", jurisdiction: "Annual discretionary spending bills funding the federal government.", agencies: ["Office of Management and Budget", "every executive department"], sources: ["Congressional Budget Office", "OMB Historical Tables", "Committee reports", "GAO"], bills: ["A Bill to Increase Funding for the National Institutes of Health", "A Bill to Freeze Non-Defense Discretionary Spending"]),
-    Committee(chamber: .senate, name: "Armed Services", jurisdiction: "The Department of Defense, military nominations, defense policy, and the National Defense Authorization Act.", agencies: ["Department of Defense", "the military services"], sources: ["DoD Comptroller", "CBO defense analyses", "GAO", "CRS"], bills: ["A Bill to Require Women to Register for Selective Service", "A Bill to Audit the Department of Defense Annually"]),
-    Committee(chamber: .senate, name: "Banking, Housing, and Urban Affairs", jurisdiction: "Banks, financial markets, insurance, housing, mass transit, and export controls.", agencies: ["Federal Reserve", "Treasury", "SEC", "FDIC", "HUD", "CFPB"], sources: ["Federal Reserve FRED database", "HUD Annual Homelessness Assessment Report", "FDIC data", "Census housing data"], bills: ["A Bill to Create a National Rental Assistance Guarantee", "A Bill to Establish a Federal Public Banking Option"]),
-    Committee(chamber: .senate, name: "Budget", jurisdiction: "The congressional budget resolution and enforcement of budget rules.", agencies: ["Congressional Budget Office", "Office of Management and Budget"], sources: ["CBO Budget and Economic Outlook", "CBO Long-Term Budget Outlook", "Treasury debt data"], bills: ["A Bill to Require CBO Scoring of All Major Executive Actions", "A Bill to Establish Statutory Debt-to-GDP Targets"]),
-    Committee(chamber: .senate, name: "Commerce, Science, and Transportation", jurisdiction: "Interstate commerce, transportation, telecommunications, consumer protection, science, oceans, and sports.", agencies: ["Department of Commerce", "Department of Transportation", "FCC", "FTC", "NASA", "NOAA"], sources: ["Bureau of Transportation Statistics", "FCC reports", "NOAA data", "Census economic indicators"], bills: ["A Bill to Require Age Verification for Social Media Platforms", "A Bill to Set Federal Standards for Autonomous Vehicles"]),
-    Committee(chamber: .senate, name: "Energy and Natural Resources", jurisdiction: "Energy policy, public lands, national parks, mining, water and power, and the Department of Energy.", agencies: ["Department of Energy", "Department of the Interior", "Federal Energy Regulatory Commission"], sources: ["Energy Information Administration", "USGS mineral commodity summaries", "Interior budget justifications"], bills: ["A Bill to Streamline Permitting for Transmission Lines", "A Bill to Create a Strategic Critical Minerals Reserve"]),
-    Committee(chamber: .senate, name: "Environment and Public Works", jurisdiction: "Environmental protection, air and water quality, highways and bridges, water infrastructure, and nuclear safety.", agencies: ["EPA", "Federal Highway Administration", "Army Corps of Engineers", "Nuclear Regulatory Commission"], sources: ["EPA greenhouse gas inventory", "EPA air quality trends", "FHWA bridge condition data", "ASCE Infrastructure Report Card"], bills: ["A Bill to Set a National Standard for PFAS in Drinking Water", "A Bill to Fund Replacement of All Lead Service Lines"]),
-    Committee(chamber: .senate, name: "Finance", jurisdiction: "Taxes, trade, Social Security, Medicare, Medicaid, and other health and welfare programs.", agencies: ["Treasury", "IRS", "Social Security Administration", "CMS", "U.S. Trade Representative"], sources: ["Joint Committee on Taxation", "Social Security and Medicare Trustees Reports", "CMS Medicaid enrollment data", "IRS Statistics of Income"], bills: ["A Bill to Raise the Corporate Tax Rate", "A Bill to Lower the Medicare Eligibility Age to 60"]),
-    Committee(chamber: .senate, name: "Foreign Relations", jurisdiction: "Treaties, ambassador nominations, foreign aid, arms sales, and overall foreign policy.", agencies: ["Department of State", "USAID"], sources: ["State Department budget justification", "CRS", "UN data", "World Bank and IMF data"], bills: ["A Bill to Ratify the Treaty on the Prohibition of Nuclear Weapons", "A Bill to Repeal Outdated Authorizations for the Use of Military Force"]),
-    Committee(chamber: .senate, name: "Health, Education, Labor, and Pensions", jurisdiction: "Public health, education, labor, workplace safety, and retirement plans.", agencies: ["HHS", "Department of Education", "Department of Labor", "FDA", "NIH", "CDC"], sources: ["CDC National Center for Health Statistics", "National Center for Education Statistics", "Bureau of Labor Statistics", "Federal Student Aid data"], bills: ["A Bill to Guarantee Paid Family and Medical Leave", "A Bill to Cap Insulin Prices Nationwide"]),
-    Committee(chamber: .senate, name: "Homeland Security and Governmental Affairs", jurisdiction: "The Department of Homeland Security, government operations, the federal workforce, and the Postal Service.", agencies: ["DHS", "FEMA", "OPM", "GSA", "U.S. Postal Service"], sources: ["DHS Office of Homeland Security Statistics", "GAO High-Risk List", "OPM FedScope", "Inspector General reports"], bills: ["A Bill to Reform Federal Disaster Aid Formulas", "A Bill to Require Cybersecurity Standards for Critical Infrastructure"]),
-    Committee(chamber: .senate, name: "Judiciary", jurisdiction: "Federal courts and judicial nominations, criminal law, immigration, civil rights, antitrust, and intellectual property.", agencies: ["Department of Justice", "FBI", "Federal judiciary", "USCIS"], sources: ["Bureau of Justice Statistics", "FBI crime data", "U.S. Sentencing Commission", "DHS immigration statistics"], bills: ["A Bill to Establish Term Limits for Supreme Court Justices", "A Bill to Reform Federal Cash Bail"]),
-    Committee(chamber: .senate, name: "Rules and Administration", jurisdiction: "Senate rules and procedure, federal elections, and Senate administration.", agencies: ["Federal Election Commission", "Election Assistance Commission", "Senate Parliamentarian"], sources: ["FEC data", "EAC surveys", "Senate Rules and Manual"], bills: ["A Bill to Reform the Senate Filibuster", "A Bill to Make Election Day a Federal Holiday"]),
-    Committee(chamber: .senate, name: "Small Business and Entrepreneurship", jurisdiction: "The Small Business Administration and policies affecting small businesses.", agencies: ["Small Business Administration"], sources: ["SBA Office of Advocacy", "Census Business Dynamics Statistics", "Federal Reserve Small Business Credit Survey"], bills: ["A Bill to Create a Startup Visa", "A Bill to Expand Broadband Grants for Rural Small Businesses"]),
-    Committee(chamber: .senate, name: "Veterans' Affairs", jurisdiction: "Veterans' benefits, health care, and the Department of Veterans Affairs.", agencies: ["Department of Veterans Affairs"], sources: ["VA National Center for Veterans Analysis and Statistics", "VA OIG", "GAO", "CBO"], bills: ["A Bill to Expand Benefits for Veterans Exposed to Toxic Substances", "A Bill to Fund Veteran Housing Vouchers"]),
-    Committee(chamber: .senate, name: "Select Committee on Intelligence", jurisdiction: "Oversight of the intelligence community and intelligence authorizations.", agencies: ["ODNI", "CIA", "NSA"], sources: ["ODNI Annual Threat Assessment", "ODNI statistical transparency reports", "PCLOB reports"], bills: ["A Bill to Reform Section 702 Surveillance Authorities", "A Bill to Strengthen Whistleblower Protections in the Intelligence Community"]),
-    Committee(chamber: .senate, name: "Select Committee on Ethics", jurisdiction: "Senate standards of conduct, financial disclosure, and misconduct investigations.", agencies: ["Senate Ethics staff"], sources: ["Senate Ethics Manual", "Senate financial disclosure database"], bills: ["A Bill to Ban Senators From Trading Individual Stocks", "A Bill to Require Disclosure of Foreign Contacts by Senate Staff"]),
-    Committee(chamber: .senate, name: "Committee on Indian Affairs", jurisdiction: "Matters affecting Native American tribes, including health, education, land, and economic development.", agencies: ["Bureau of Indian Affairs", "Indian Health Service"], sources: ["Indian Health Service statistics", "Bureau of Indian Affairs reports", "Census American Indian and Alaska Native data", "GAO"], bills: ["A Bill to Fully Fund the Indian Health Service", "A Bill to Expand Tribal Jurisdiction Over Crimes on Tribal Land"]),
-    Committee(chamber: .senate, name: "Special Committee on Aging", jurisdiction: "Studies issues affecting older Americans, including retirement, health care, and elder fraud, and reports to the Senate.", agencies: ["Social Security Administration", "CMS", "Administration for Community Living"], sources: ["Social Security Trustees Report", "Census population projections", "FTC elder fraud data", "CMS data"], bills: ["A Bill to Expand Home and Community-Based Care for Seniors", "A Bill to Strengthen Penalties for Scams Targeting Older Adults"]),
+    Committee(name: "Foreign Relations", chamber: "Senate",
+        jurisdiction: "Treaties, foreign aid, arms sales, ambassadors, international organizations, and overall foreign policy.",
+        agencies: ["Department of State", "USAID"],
+        sources: [
+            SourceLink(title: "U.S. Department of State", url: "https://www.state.gov"),
+            SourceLink(title: "Congressional Research Service", url: "https://crsreports.congress.gov"),
+            SourceLink(title: "USAspending.gov — foreign aid", url: "https://www.usaspending.gov"),
+            SourceLink(title: "World Bank Open Data", url: "https://data.worldbank.org"),
+        ],
+        statSuggestions: ["How much U.S. foreign aid goes to the top five recipient countries?", "How many treaties has the Senate ratified in the last decade?", "What share of the federal budget is foreign assistance?", "How many UN peacekeeping missions are active right now?"],
+        bills: ["A Bill to Condition Military Aid on Human Rights Benchmarks", "A Bill to Repeal Outdated Authorizations for the Use of Military Force"]),
+
+    Committee(name: "Environment and Public Works", chamber: "Senate",
+        jurisdiction: "Environmental protection, air and water quality, highways and bridges, water infrastructure, and nuclear safety.",
+        agencies: ["EPA", "Army Corps of Engineers", "Nuclear Regulatory Commission"],
+        sources: [
+            SourceLink(title: "EPA — reports and data", url: "https://www.epa.gov"),
+            SourceLink(title: "EPA Greenhouse Gas Inventory", url: "https://www.epa.gov/ghgemissions"),
+            SourceLink(title: "USGS Water Data", url: "https://www.usgs.gov"),
+            SourceLink(title: "Congressional Budget Office", url: "https://www.cbo.gov"),
+        ],
+        statSuggestions: ["What are current U.S. greenhouse gas emissions by sector?", "How many U.S. bridges are rated in poor condition?", "How many communities still have lead service lines?", "What share of Americans breathe air that fails EPA standards?"],
+        bills: ["A Bill to Set a National Standard for PFAS in Drinking Water", "A Bill to Fund Replacement of All Lead Service Lines"]),
+
+    Committee(name: "Judiciary", chamber: "House and Senate",
+        jurisdiction: "Federal courts and judicial nominations, criminal law, immigration, civil rights and liberties, antitrust, and intellectual property.",
+        agencies: ["Department of Justice", "FBI", "Federal judiciary", "USCIS"],
+        sources: [
+            SourceLink(title: "Bureau of Justice Statistics", url: "https://bjs.ojp.gov"),
+            SourceLink(title: "FBI Crime Data Explorer", url: "https://cde.ucr.cjis.gov"),
+            SourceLink(title: "U.S. Sentencing Commission", url: "https://www.ussc.gov"),
+            SourceLink(title: "DHS Immigration Statistics", url: "https://www.dhs.gov/ohss"),
+        ],
+        statSuggestions: ["What share of federal criminal cases end in a plea bargain?", "How many people are held in federal prison right now?", "How large is the immigration court backlog?", "What is the federal incarceration rate by race?"],
+        bills: ["A Bill to Eliminate Mandatory Minimum Sentences for Nonviolent Drug Offenses", "A Bill to Create a Pathway to Citizenship for Dreamers"]),
+
+    Committee(name: "Small Business and Entrepreneurship", chamber: "Senate",
+        jurisdiction: "The Small Business Administration, small business lending and contracting, and regulatory burden on small firms.",
+        agencies: ["Small Business Administration"],
+        sources: [
+            SourceLink(title: "SBA Office of Advocacy", url: "https://advocacy.sba.gov"),
+            SourceLink(title: "Census Business Dynamics Statistics", url: "https://www.census.gov/programs-surveys/bds.html"),
+            SourceLink(title: "Federal Reserve Small Business Credit Survey", url: "https://www.fedsmallbusiness.org"),
+            SourceLink(title: "Bureau of Labor Statistics", url: "https://www.bls.gov"),
+        ],
+        statSuggestions: ["How many small businesses are there in the United States?", "What share of new small businesses survive five years?", "How much did SBA lend in its latest fiscal year?", "What share of private sector jobs are at small businesses?"],
+        bills: ["A Bill to Expand SBA Microloans for First-Time Entrepreneurs", "A Bill to Simplify Federal Contracting for Small Businesses"]),
+
+    Committee(name: "Health, Education, Labor, and Pensions", chamber: "Senate",
+        jurisdiction: "Public health, education, labor standards, workplace safety, and retirement plans.",
+        agencies: ["HHS", "Department of Education", "Department of Labor", "FDA", "NIH", "CDC"],
+        sources: [
+            SourceLink(title: "CDC National Center for Health Statistics", url: "https://www.cdc.gov/nchs"),
+            SourceLink(title: "National Center for Education Statistics", url: "https://nces.ed.gov"),
+            SourceLink(title: "Bureau of Labor Statistics", url: "https://www.bls.gov"),
+            SourceLink(title: "OSHA Data and Statistics", url: "https://www.osha.gov/data"),
+        ],
+        statSuggestions: ["What is U.S. life expectancy compared with peer countries?", "How much has college tuition risen in twenty years?", "How many workers lack paid sick leave?", "What is the current average price of insulin?"],
+        bills: ["A Bill to Guarantee Paid Family and Medical Leave", "A Bill to Cap Insulin Prices Nationwide"]),
+
+    Committee(name: "Commerce, Science, and Transportation", chamber: "Senate",
+        jurisdiction: "Interstate commerce, transportation, telecommunications, consumer protection, science, oceans, and aviation.",
+        agencies: ["Department of Commerce", "Department of Transportation", "FCC", "FTC", "NASA", "NOAA"],
+        sources: [
+            SourceLink(title: "Bureau of Transportation Statistics", url: "https://www.bts.gov"),
+            SourceLink(title: "FCC Reports and Research", url: "https://www.fcc.gov/reports-research"),
+            SourceLink(title: "NOAA Data", url: "https://www.noaa.gov"),
+            SourceLink(title: "FTC Reports", url: "https://www.ftc.gov/reports"),
+        ],
+        statSuggestions: ["How many satellites are currently in orbit?", "How many Americans still lack broadband access?", "How many traffic deaths were there last year?", "How many commercial space launches happened last year?"],
+        bills: ["A Bill to Require Age Verification for Social Media Platforms", "A Bill to Set Federal Standards for Autonomous Vehicles"]),
+
+    Committee(name: "Homeland Security and Governmental Affairs", chamber: "Senate",
+        jurisdiction: "The Department of Homeland Security, border security, cybersecurity, emergency management, government operations, and the federal workforce.",
+        agencies: ["DHS", "CBP", "TSA", "FEMA", "CISA", "OPM"],
+        sources: [
+            SourceLink(title: "DHS Office of Homeland Security Statistics", url: "https://www.dhs.gov/ohss"),
+            SourceLink(title: "CBP Newsroom Stats", url: "https://www.cbp.gov/newsroom/stats"),
+            SourceLink(title: "GAO High-Risk List", url: "https://www.gao.gov/high-risk-list"),
+            SourceLink(title: "OPM FedScope Workforce Data", url: "https://www.fedscope.opm.gov"),
+        ],
+        statSuggestions: ["How many border encounters were recorded last year?", "How many federal disaster declarations were issued last year?", "How many reported ransomware attacks hit U.S. infrastructure?", "How large is the federal civilian workforce?"],
+        bills: ["A Bill to Reform Federal Disaster Aid Formulas", "A Bill to Require Cybersecurity Standards for Critical Infrastructure"]),
+
+    Committee(name: "Banking, Housing, and Urban Affairs", chamber: "Senate",
+        jurisdiction: "Banks, financial markets, insurance, housing, mass transit, and export controls.",
+        agencies: ["Federal Reserve", "Treasury", "SEC", "FDIC", "HUD", "CFPB"],
+        sources: [
+            SourceLink(title: "Federal Reserve FRED", url: "https://fred.stlouisfed.org"),
+            SourceLink(title: "HUD User — housing data", url: "https://www.huduser.gov"),
+            SourceLink(title: "FDIC Data and Analysis", url: "https://www.fdic.gov/analysis"),
+            SourceLink(title: "Census Housing Data", url: "https://www.census.gov/topics/housing.html"),
+        ],
+        statSuggestions: ["How many people experienced homelessness on a given night?", "What is the median U.S. home price right now?", "What share of renters are cost burdened?", "How many bank branches have closed in the last decade?"],
+        bills: ["A Bill to Create a National Rental Assistance Guarantee", "A Bill to Expand the Low-Income Housing Tax Credit"]),
+
+    Committee(name: "Armed Services", chamber: "House and Senate",
+        jurisdiction: "The Department of Defense, military pay and readiness, weapons procurement, and the annual National Defense Authorization Act.",
+        agencies: ["Department of Defense", "Army, Navy, Air Force, Marine Corps, Space Force"],
+        sources: [
+            SourceLink(title: "DoD Comptroller — budget materials", url: "https://comptroller.defense.gov"),
+            SourceLink(title: "CBO — defense analyses", url: "https://www.cbo.gov/topics/defense-and-national-security"),
+            SourceLink(title: "GAO Weapon Systems Assessments", url: "https://www.gao.gov"),
+            SourceLink(title: "Congressional Research Service", url: "https://crsreports.congress.gov"),
+        ],
+        statSuggestions: ["How large is the current defense budget?", "How many U.S. troops are stationed overseas?", "What does the F-35 program cost per aircraft?", "How many service members are on food assistance?"],
+        bills: ["A Bill to Raise Base Pay for Junior Enlisted Service Members", "A Bill to Require Congressional Approval for Overseas Troop Deployments Beyond 90 Days"]),
+
+    Committee(name: "Education and the Workforce", chamber: "House",
+        jurisdiction: "K-12 and higher education, student loans, job training, labor standards, wages, and pensions.",
+        agencies: ["Department of Education", "Department of Labor", "National Labor Relations Board"],
+        sources: [
+            SourceLink(title: "National Center for Education Statistics", url: "https://nces.ed.gov"),
+            SourceLink(title: "Federal Student Aid Data Center", url: "https://studentaid.gov/data-center"),
+            SourceLink(title: "Bureau of Labor Statistics", url: "https://www.bls.gov"),
+            SourceLink(title: "Department of Labor", url: "https://www.dol.gov"),
+        ],
+        statSuggestions: ["How much total student loan debt is outstanding?", "What is the current federal minimum wage in real terms?", "What are U.S. reading and math scores on the NAEP?", "How many teachers left the profession last year?"],
+        bills: ["A Bill to Raise the Federal Minimum Wage", "A Bill to Make Community College Tuition-Free"]),
+
+    Committee(name: "Energy and Commerce", chamber: "House",
+        jurisdiction: "Health care, energy, environment, telecommunications, consumer protection, and interstate commerce.",
+        agencies: ["HHS", "Department of Energy", "EPA", "FCC", "FTC", "FDA"],
+        sources: [
+            SourceLink(title: "Energy Information Administration", url: "https://www.eia.gov"),
+            SourceLink(title: "CMS National Health Expenditure Data", url: "https://www.cms.gov"),
+            SourceLink(title: "CDC National Center for Health Statistics", url: "https://www.cdc.gov/nchs"),
+            SourceLink(title: "FCC Reports and Research", url: "https://www.fcc.gov/reports-research"),
+        ],
+        statSuggestions: ["What share of U.S. electricity comes from renewables?", "How much does the U.S. spend on health care per person?", "How many Americans are uninsured?", "How much has the average electricity bill risen?"],
+        bills: ["A Bill to Allow Medicare to Negotiate All Prescription Drug Prices", "A Bill to Require a Federal Online Data Privacy Standard"]),
+
+    Committee(name: "Science, Space, and Technology", chamber: "House",
+        jurisdiction: "Non-defense scientific research, NASA, NSF, NIST, NOAA research, energy research, and STEM education.",
+        agencies: ["NASA", "National Science Foundation", "NIST", "NOAA", "DOE Office of Science"],
+        sources: [
+            SourceLink(title: "NSF National Center for Science and Engineering Statistics", url: "https://ncses.nsf.gov"),
+            SourceLink(title: "NASA Budget and Reports", url: "https://www.nasa.gov/budgets-plans-and-reports"),
+            SourceLink(title: "NIST", url: "https://www.nist.gov"),
+            SourceLink(title: "NSF Budget and Performance", url: "https://www.nsf.gov/about/budget"),
+        ],
+        statSuggestions: ["How many satellites are in orbit right now?", "What share of U.S. adults use AI tools?", "How much does the U.S. spend on federal R&D?", "How many STEM degrees are awarded each year?"],
+        bills: ["A Bill to Double Federal Basic Research Funding Over Five Years", "A Bill to Establish a National Artificial Intelligence Safety Institute"]),
+
+    Committee(name: "Oversight and Reform", chamber: "House",
+        jurisdiction: "Government-wide oversight, the federal workforce, the Postal Service, the census, and the District of Columbia.",
+        agencies: ["OPM", "GSA", "U.S. Postal Service", "Census Bureau"],
+        sources: [
+            SourceLink(title: "GAO High-Risk List", url: "https://www.gao.gov/high-risk-list"),
+            SourceLink(title: "OPM FedScope Workforce Data", url: "https://www.fedscope.opm.gov"),
+            SourceLink(title: "Oversight.gov — Inspector General reports", url: "https://www.oversight.gov"),
+            SourceLink(title: "USPS Financial Reports", url: "https://about.usps.com/what/financials"),
+        ],
+        statSuggestions: ["How much does the federal government lose to improper payments each year?", "How large is the Postal Service deficit?", "How many federal employees work remotely?", "What did the last census cost per household?"],
+        bills: ["A Bill to Make Washington, D.C. the Fifty-First State", "A Bill to Reform the Federal Hiring Process"]),
+
+    Committee(name: "Transportation and Infrastructure", chamber: "House",
+        jurisdiction: "Highways, transit, aviation, rail, ports and waterways, pipelines, the Coast Guard, and public buildings.",
+        agencies: ["Department of Transportation", "FAA", "Federal Highway Administration", "Amtrak", "Army Corps of Engineers"],
+        sources: [
+            SourceLink(title: "Bureau of Transportation Statistics", url: "https://www.bts.gov"),
+            SourceLink(title: "FHWA Highway Statistics", url: "https://www.fhwa.dot.gov/policyinformation/statistics.cfm"),
+            SourceLink(title: "NHTSA Data", url: "https://www.nhtsa.gov/data"),
+            SourceLink(title: "ASCE Infrastructure Report Card", url: "https://infrastructurereportcard.org"),
+        ],
+        statSuggestions: ["How many U.S. bridges are structurally deficient?", "How many people ride Amtrak each year?", "What share of flights arrive on time?", "How much of the Highway Trust Fund comes from the gas tax?"],
+        bills: ["A Bill to Fund High-Speed Rail Corridors", "A Bill to Raise the Federal Gas Tax and Index It to Inflation"]),
+
+    Committee(name: "Natural Resources", chamber: "House",
+        jurisdiction: "Public lands, national parks, water and power, fisheries and wildlife, mining, tribal affairs, and U.S. territories.",
+        agencies: ["Department of the Interior", "Bureau of Land Management", "National Park Service", "Bureau of Indian Affairs"],
+        sources: [
+            SourceLink(title: "USGS Mineral Commodity Summaries", url: "https://www.usgs.gov/centers/national-minerals-information-center"),
+            SourceLink(title: "National Park Service Visitation Statistics", url: "https://irma.nps.gov/Stats"),
+            SourceLink(title: "Department of the Interior", url: "https://www.doi.gov"),
+            SourceLink(title: "Congressional Research Service", url: "https://crsreports.congress.gov"),
+        ],
+        statSuggestions: ["How much land does the federal government own?", "How many people visited national parks last year?", "How much lithium does the U.S. produce?", "How many acres burned in wildfires last year?"],
+        bills: ["A Bill to Ban New Oil and Gas Leasing on Federal Lands", "A Bill to Grant Statehood to Puerto Rico"]),
+
+    Committee(name: "Ethics", chamber: "House and Senate",
+        jurisdiction: "Standards of conduct for members and staff, financial disclosure, gifts, travel, and misconduct investigations.",
+        agencies: ["House Committee on Ethics", "Senate Select Committee on Ethics"],
+        sources: [
+            SourceLink(title: "House Committee on Ethics", url: "https://ethics.house.gov"),
+            SourceLink(title: "Senate Select Committee on Ethics", url: "https://www.ethics.senate.gov"),
+            SourceLink(title: "House Financial Disclosure Reports", url: "https://disclosures-clerk.house.gov"),
+            SourceLink(title: "Senate Financial Disclosure", url: "https://efdsearch.senate.gov"),
+        ],
+        statSuggestions: ["How many members of Congress trade individual stocks?", "How many ethics investigations opened last year?", "How much privately funded travel do members take?", "What share of members are millionaires?"],
+        bills: ["A Bill to Ban Individual Stock Trading by Members of Congress", "A Bill to Require Public Disclosure of All Privately Funded Congressional Travel"]),
 ]
+
+struct CongressSegment: Hashable {
+    let slot: SpeechSlot
+    let title: String
+    let stance: String
+    let seconds: Int
+
+    var isUser: Bool { slot != .ai }
+    var wordBudget: Int { max(120, seconds * 150 / 60) }
+
+    var clock: String {
+        let minutes = seconds / 60
+        let rest = seconds % 60
+        return rest == 0 ? "\(minutes):00" : String(format: "%d:%02d", minutes, rest)
+    }
+}
 
 struct Participant: Hashable, Codable {
     var name: String
@@ -292,6 +461,8 @@ struct PracticeConfig: Hashable {
     var judgePreset: JudgePreset = .novice
     var judgeInstructions: String = ""
     var committee: String = ""
+    var billText: String = ""
+    var billFilename: String = ""
     var lowPressure: Bool = false
     var plainLanguage: Bool = false
 
@@ -307,6 +478,9 @@ enum MessageKind: String, Codable, Hashable {
     case speech
     case crossfireQuestion
     case crossfireAnswer
+    case inquiry
+    case ruling
+    case amendment
 }
 
 struct ChatMessage: Identifiable, Codable, Hashable {
@@ -349,6 +523,23 @@ struct ScriptStep: Hashable {
 }
 
 enum RoundScript {
+    static let congress: [CongressSegment] = [
+        CongressSegment(slot: .player(0), title: "Authorship speech", stance: "Pro", seconds: 120),
+        CongressSegment(slot: .ai, title: "Constructive", stance: "Con", seconds: 240),
+        CongressSegment(slot: .player(0), title: "Second speech", stance: "Pro", seconds: 120),
+        CongressSegment(slot: .ai, title: "Closing", stance: "Con", seconds: 120),
+    ]
+
+    static func congressSegment(_ n: Int) -> CongressSegment {
+        if n < congress.count { return congress[n] }
+        let k = n - congress.count
+        return k % 2 == 0
+            ? CongressSegment(slot: .ai, title: "Motion to amend", stance: "Con", seconds: 120)
+            : CongressSegment(slot: .player(0), title: "Response to the motion", stance: "Pro", seconds: 120)
+    }
+
+    static func congressIsAmendmentPhase(_ n: Int) -> Bool { n >= congress.count }
+
     static let team: [ScriptStep] = [
         ScriptStep(slot: .player(0), kind: .speech),
         ScriptStep(slot: .ai, kind: .speech),

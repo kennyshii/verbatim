@@ -47,15 +47,22 @@ rounds work between people who aren't in the same room. Set the relay's URL in S
 (the default `http://localhost:8787` works for the simulator; host it anywhere for real phones).
 
 ### Model Congress
-- Every standing committee of the House and Senate plus the select and special committees (41 total),
-  each with its jurisdiction, the agencies it oversees, and where to find reliable numbers (CBO, CRS,
-  BLS, Census, agency data…).
-- **Committee briefing** — an AI-prepared, saved briefing: live policy fights with the strongest argument
-  on each side, figures worth knowing, and where to verify them. Any number the AI states is marked
-  *(verify)*; where it isn't confident it names the dataset to check instead of guessing.
-- **Congress round** — pick practice legislation (or write a bill), affirm or negate, and give speeches.
-  An opposing member refutes you and asks one cross-examination question each turn; a parliamentarian
-  scores you at the end on argumentation, evidence, organization, questioning, and decorum.
+- The 16 committees model congress actually uses, each with its jurisdiction and the agencies it oversees.
+- **Where to find reliable numbers** — tappable links straight to the source (CBO, CRS, BLS, Census, EIA,
+  BJS, NCES, FRED, agency data portals…).
+- **Look up a statistic** — ask for a figure in the committee's area (or tap a suggestion like "How many
+  satellites are in orbit right now?") and get the number, how to use it, and the source that publishes
+  it. Figures come from the model's training data, not a live feed, so anything marked *(verify)* should
+  be checked against the links before you use it.
+- **Bill upload** — upload the actual legislation as PDF, DOCX, TXT, RTF, or Markdown. The text is read
+  out of the file and handed to both the opposing member and the parliamentarian, or pick a preset bill.
+- **Round format** — 2:00 authorship (you) → 4:00 constructive (AI, opposed) → 2:00 second speech (you)
+  → 2:00 closing (AI). A live countdown runs on your speeches. Afterwards the floor opens to amendments,
+  which the AI moves and you answer.
+- **Point of inquiry** — rise at any time to have something looked up or a procedural question settled.
+  A **separate parliamentarian AI** — not your opponent — rules on it and names where to verify the
+  answer. Inquiries go into the record but aren't scored as speeches.
+- At the end the parliamentarian scores you on argumentation, evidence, organization, questioning, and decorum.
 
 ### Delivery: presentational accuracy
 Three live bars under the composer, scored as you type, with a per-turn score on each bubble, a delivery
@@ -103,6 +110,7 @@ with the source to confirm it against.
 | `DebatePractice/Services/FeedbackParser.swift` | Splits coach output and judge decisions into sections |
 | `DebatePractice/Services/SpeechMetrics.swift` | Filler, smoothness, and tone scoring |
 | `DebatePractice/Services/RoomClient.swift` | Online room codes, turns, and syncing |
+| `DebatePractice/Services/DocumentText.swift` | Reads bill text out of PDF / DOCX / RTF / TXT |
 | `server/server.js` | The relay server for online rounds |
 | `DebatePractice/Services/Speaker.swift` | Text-to-speech |
 | `DebatePractice/Services/TagExtractor.swift` | Recurring-feedback tagging |

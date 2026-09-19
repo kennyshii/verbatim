@@ -64,12 +64,44 @@ struct ClaudeClient {
         """
     }
 
-    static func congressOpponentSystemPrompt(_ c: PracticeConfig) -> String {
+    static func congressOpponentSystemPrompt(_ c: PracticeConfig, segment: CongressSegment) -> String {
+        let billText = c.billText.isEmpty ? "" : "\n\nThe text of the legislation under debate:\n\"\"\"\n\(String(c.billText.prefix(6000)))\n\"\"\""
         var prompt = """
-        You are a member of a model congress serving on the \(c.committee), debating the legislation: \(c.topic). The student is speaking in \(c.userSide == .affirmative ? "affirmation" : "negation") of the bill; you represent the opposing position. Respond the way a well-prepared legislator would in a Congressional Debate round: deliver a concise speech of under 200 words that directly refutes the student's most recent arguments and advances your side's strongest point, then end with exactly one pointed cross-examination question for the student. Maintain parliamentary decorum at all times; address the student as "the representative" or "the senator". Do not cite specific statistics, studies, or numbers unless you are highly confident they are accurate; prefer reasoning and widely known facts, and write "(verify)" after any figure you do use. Respond in \(c.language.rawValue). Match your rigor to difficulty level: \(c.difficulty.rawValue).
+        You are a member of a model congress serving on the \(c.committee), debating the legislation: \(c.topic). The student is speaking in \(c.userSide == .affirmative ? "affirmation" : "negation") of the bill; you represent the opposing position and speak only against the student's side.\(billText)
+
+        You are now delivering your \(segment.title.lowercased()), a \(segment.clock) speech in \(segment.stance.lowercased()) of the bill. Write roughly \(segment.wordBudget) words — the amount a speaker covers in \(segment.clock) at a normal speaking pace. Directly refute the student's most recent arguments before advancing your own, and end with exactly one pointed cross-examination question for the student. Maintain parliamentary decorum at all times; address the student as "the representative" or "the senator". Do not cite specific statistics, studies, or numbers unless you are highly confident they are accurate; prefer reasoning and widely known facts, and write "(verify)" after any figure you do use. Respond in \(c.language.rawValue). Match your rigor to difficulty level: \(c.difficulty.rawValue).
         """
         if c.lowPressure { prompt += lowPressureNote }
         return prompt
+    }
+
+    static func congressAmendmentSystemPrompt(_ c: PracticeConfig) -> String {
+        let billText = c.billText.isEmpty ? "" : "\n\nThe text of the legislation:\n\"\"\"\n\(String(c.billText.prefix(6000)))\n\"\"\""
+        var prompt = """
+        You are a member of a model congress on the \(c.committee) who has been debating the legislation: \(c.topic), speaking against the student's position.\(billText)
+
+        The main speeches are over and the floor is now open to amendments. Move exactly one amendment. Structure your turn with these labels, each on its own line: "Motion:" — the formal motion, phrased as "I move to amend the bill by…" naming the specific clause or section and the exact change. "Rationale:" — two or three sentences on why the amendment is necessary, tied to what the student argued. "Question to the sponsor:" — one pointed question the student must answer when they respond to the motion. Keep the whole turn under 200 words. Do not invent statistics; write "(verify)" after any figure. Respond in \(c.language.rawValue).
+        """
+        if c.lowPressure { prompt += lowPressureNote }
+        return prompt
+    }
+
+    static func parliamentarianInquirySystemPrompt(_ c: PracticeConfig) -> String {
+        """
+        You are the presiding officer and parliamentarian of a model congress session on the \(c.committee), debating: \(c.topic). You are a neutral third party: you are not debating, you do not take a side, and you never argue for or against the bill. A member has risen to a point of inquiry and asked you to look something up or clarify a point of procedure.
+
+        Answer in two labeled parts. "Ruling:" — a direct answer in two or three sentences. "Where to verify:" — the specific agency, dataset, or report the member should check, named precisely.
+
+        Accuracy matters more than completeness. You have no live internet access and your knowledge has a cutoff date, so: state a figure only if you are highly confident, give it as an approximate value with its year and end it with "(verify)". If you are not confident, say plainly that you cannot confirm it from the chair and name exactly where the member should look. Never invent a number, a citation, or a rule. If the inquiry is procedural rather than factual, rule on it using standard parliamentary procedure. Respond in \(c.language.rawValue).
+        """
+    }
+
+    static func statLookupSystemPrompt(_ language: Language) -> String {
+        """
+        You are a research assistant helping a student debater find a statistic they can use at the podium. Answer in three labeled parts, each on its own line. "Figure:" — the number itself, given as an approximate value with the year it comes from, ending with "(verify)". "Context:" — one or two sentences on what the number means and how a debater should and should not use it. "Source:" — the exact agency, dataset, or report that publishes it, named precisely enough to search for.
+
+        Accuracy matters more than completeness. You have no live internet access and your knowledge has a cutoff date, so a figure that changes often — prices, counts that grow monthly, anything "right now" — should be given as the most recent value you are confident in, clearly labeled with its year, plus a warning that it has likely changed. If you are not confident of any figure, say so plainly under "Figure:" and put all your effort into naming exactly where the student can look it up. Never invent a number or a citation. Respond in \(language.rawValue).
+        """
     }
 
     static func parliamentarianSystemPrompt(_ c: PracticeConfig) -> String {
@@ -105,12 +137,6 @@ struct ClaudeClient {
         """
     }
 
-    static func committeeBriefingSystemPrompt(_ committee: Committee) -> String {
-        """
-        You are a research assistant preparing a briefing for a student competing in model congress as a member of the \(committee.fullName). The committee's jurisdiction: \(committee.jurisdiction) Be accurate above all. Never invent a statistic. Only state a number if you are highly confident it is approximately correct, give it as an approximate value with its year and source agency, and end every figure with "(verify)". If you are not confident of a figure, describe exactly where a student can look it up instead. Write in clear, plain language a high school student can use at a podium.
-        """
-    }
-
     private static let lowPressureNote = "\n\nThe student has asked for a lower-pressure round. Keep every rule above, but stay calm and courteous, never mock or belittle, keep each response under 120 words, and take on one or two points at a time."
 
     private static let plainLanguageNote = "\n\nWrite in plain language: short sentences, everyday words, and define any debate jargon you use the first time it appears."
@@ -133,8 +159,14 @@ struct ClaudeClient {
             return try await send(system: Self.briefingSystemPrompt(config),
                                   messages: Self.apiMessages(from: history), maxTokens: 1500)
         case .congress:
-            return try await send(system: Self.congressOpponentSystemPrompt(config),
-                                  messages: Self.apiMessages(from: history), maxTokens: 700)
+            let index = history.filter { $0.effectiveKind == .speech || $0.effectiveKind == .amendment }.count
+            let segment = RoundScript.congressSegment(index)
+            if RoundScript.congressIsAmendmentPhase(index) {
+                return try await send(system: Self.congressAmendmentSystemPrompt(config),
+                                      messages: Self.apiMessages(from: history), maxTokens: 700)
+            }
+            return try await send(system: Self.congressOpponentSystemPrompt(config, segment: segment),
+                                  messages: Self.apiMessages(from: history), maxTokens: segment.seconds >= 240 ? 1400 : 800)
         case .team:
             var messages = Self.apiMessages(from: history)
             let aiTurns = history.filter { $0.role == .assistant }.count
@@ -201,7 +233,13 @@ struct ClaudeClient {
         }
         prompt += "\nHere is the full transcript:\n\n"
         for message in transcript {
-            let speaker = message.role == .user ? (config.mode == .team ? (message.speaker ?? "Student") : "Student") : config.mode.assistantLabel
+            let speaker: String
+            switch message.effectiveKind {
+            case .inquiry: speaker = "Student (point of inquiry)"
+            case .ruling: speaker = "Parliamentarian (ruling, not part of the student's speeches)"
+            case .amendment: speaker = message.role == .user ? "Student (on the amendment)" : "Opposing member (motion to amend)"
+            default: speaker = message.role == .user ? (config.mode == .team ? (message.speaker ?? "Student") : "Student") : config.mode.assistantLabel
+            }
             prompt += "\(speaker): \(message.text)\n\n"
         }
         prompt += "Review the student's performance across the whole session. Quote their own words when identifying the strongest and weakest parts.\n\n"
@@ -225,12 +263,25 @@ struct ClaudeClient {
         return FeedbackParser.parseDecision(raw, affirmative: affirmative, negative: negative)
     }
 
-    func committeeBriefing(_ committee: Committee) async throws -> String {
+    func pointOfInquiry(config: PracticeConfig, question: String, history: [ChatMessage]) async throws -> String {
+        var prompt = "Debate so far:\n\n"
+        for message in history.suffix(6) {
+            prompt += "\(message.speaker ?? (message.role == .user ? "The member" : "Opposing member")): \(message.text)\n\n"
+        }
+        prompt += "The member rises to a point of inquiry:\n\"\"\"\n\(question)\n\"\"\"\n\nRule on it."
+        return try await send(system: Self.parliamentarianInquirySystemPrompt(config),
+                              messages: [["role": "user", "content": prompt]], maxTokens: 600)
+    }
+
+    func lookUpStatistic(_ question: String, committee: Committee, language: Language) async throws -> String {
         let prompt = """
-        Prepare a briefing for the \(committee.fullName). Use these labeled sections, each on its own line: "Jurisdiction:" — one short paragraph. "Live debates:" — the five biggest current policy fights in this committee's area, each with the strongest argument on each side in one sentence apiece. "Figures worth knowing:" — statistics a member could use at the podium, following the accuracy rules exactly; where you are not confident, name the specific report or dataset to check instead. "Where to verify:" — the most reliable sources, starting with: \(committee.sources.joined(separator: ", ")). Keep the whole briefing under 600 words.
+        The student is debating in the \(committee.fullName), whose jurisdiction is: \(committee.jurisdiction)
+        The sources this committee relies on are: \(committee.sources.map(\.title).joined(separator: ", ")).
+
+        Their question: "\(question)"
         """
-        return try await send(system: Self.committeeBriefingSystemPrompt(committee),
-                              messages: [["role": "user", "content": prompt]], maxTokens: 1800)
+        return try await send(system: Self.statLookupSystemPrompt(language),
+                              messages: [["role": "user", "content": prompt]], maxTokens: 700)
     }
 
     private static func apiMessages(from history: [ChatMessage]) -> [[String: String]] {
