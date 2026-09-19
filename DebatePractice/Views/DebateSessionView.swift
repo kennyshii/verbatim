@@ -1,0 +1,432 @@
+import SwiftUI
+
+struct PracticeSessionView: View {
+    let config: PracticeConfig
+
+    @EnvironmentObject private var app: AppState
+    @AppStorage("support.readAloud") private var readAloud = false
+    @AppStorage("support.showFillerMeter") private var showFillerMeter = true
+
+    @State private var messages: [ChatMessage] = []
+    @State private var input = ""
+    @State private var isThinking = false
+    @State private var errorMessage: String?
+    @State private var showEndConfirm = false
+    @State private var ready = false
+
+    private var userName: String { app.currentUser?.username ?? "You" }
+
+    private var teamStep: ScriptStep? {
+        config.mode == .team ? RoundScript.teamStep(messages.count) : nil
+    }
+
+    private var currentParticipant: Participant? {
+        guard config.mode.isMultiplayer, !config.participants.isEmpty else { return nil }
+        if let step = teamStep {
+            if case .player(let slot) = step.slot { return config.participants[slot % config.participants.count] }
+            return nil
+        }
+        return config.participants[messages.count % config.participants.count]
+    }
+
+    private var awaitingAI: Bool {
+        teamStep?.slot == .ai
+    }
+
+    private var crossfirePrompt: (index: Int, total: Int, text: String)? {
+        guard let step = teamStep, step.kind == .crossfireAnswer,
+              let asked = messages.last(where: { $0.effectiveKind == .crossfireQuestion })
+        else { return nil }
+        let list = ChatMessage.questions(in: asked.text)
+        let answered = messages.filter { $0.effectiveKind == .crossfireAnswer }.count
+        guard answered < list.count else { return nil }
+        return (answered + 1, list.count, list[answered])
+    }
+
+    private var canSend: Bool {
+        !isThinking && !awaitingAI && !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var endLabel: String {
+        switch config.mode {
+        case .briefing: return "Finish Briefing"
+        case .versus, .twoVtwo, .team, .congress: return "End Round"
+        default: return "End Debate"
+        }
+    }
+
+    private var title: String {
+        switch config.mode {
+        case .debate: return "Debate"
+        case .coach: return "Coach session"
+        case .briefing: return "Briefing"
+        case .versus: return "1v1"
+        case .twoVtwo: return "2v2"
+        case .team: return "Team vs AI"
+        case .congress: return "Congress round"
+        }
+    }
+
+    private var intro: String {
+        switch config.mode {
+        case .debate: return "Make your opening argument for the resolution. The AI will argue against you."
+        case .coach: return "Make your argument. The coach will give you structured feedback on each turn."
+        case .briefing: return "Write out your points for the resolution — rough is fine. You'll get back a sharpened version and a list of what changed. Revise and resend as many times as you like."
+        case .versus: return "Pass the phone to whoever is speaking. The affirmative opens. When you're both done, end the round and the judge decides."
+        case .twoVtwo: return "Public Forum order: first speakers alternate, then second speakers, then around again. Pass the phone to whoever the header names. End the round for the judge's decision."
+        case .team: return "\(config.participants.first?.name ?? "The case speaker") opens with the case. The AI opposing team answers, then crossfire: it asks your team three questions, answered live one at a time, alternating between partners. Then the rebuttal speaker takes over."
+        case .congress: return "Deliver your \(config.userSide == .affirmative ? "affirmative" : "negative") speech on the bill. An opposing member will refute you and ask one question — answer it in your next speech."
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            pinnedHeader
+            Divider()
+            if config.lowPressure && !ready && !config.mode.isMultiplayer {
+                groundingCard
+            } else {
+                transcript
+                Divider()
+                composer
+            }
+        }
+        .background(Theme.background)
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button(endLabel) { endTapped() }
+                    .disabled(isThinking)
+            }
+        }
+        .confirmationDialog(config.isJudged ? "End the round and send it to the judge?" : "End this session and get your feedback?",
+                            isPresented: $showEndConfirm, titleVisibility: .visible) {
+            Button(endLabel) { finish() }
+            Button("Keep going", role: .cancel) {}
+        }
+        .task { advanceIfAITurn() }
+        .onDisappear { Speaker.shared.stop() }
+    }
+
+    private var pinnedHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(config.kind == .congress ? config.committee : config.kind.subjectLabel)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(config.topic)
+                .font(.headline)
+                .foregroundStyle(Theme.accent)
+            if let p = currentParticipant {
+                HStack(spacing: 6) {
+                    Image(systemName: crossfirePrompt == nil ? "person.fill" : "questionmark.bubble.fill")
+                    if let cf = crossfirePrompt {
+                        Text("Crossfire — \(p.name) answers question \(cf.index) of \(cf.total)")
+                    } else {
+                        Text("Now speaking: \(p.name) · \(p.side.rawValue) · \(p.role)")
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.sandText)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 8)
+                .background(Theme.sand)
+                .clipShape(Capsule())
+                .accessibilityAddTraits(.isHeader)
+            } else {
+                Text("\(config.mode.rawValue) · \(config.difficulty.rawValue) · \(config.language.rawValue)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Theme.tint)
+    }
+
+    private var groundingCard: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Image(systemName: "heart")
+                    .font(.title)
+                    .foregroundStyle(Theme.accent)
+                Text("Before you start")
+                    .font(.title3.weight(.semibold))
+                Text("Nobody is watching. Nothing here is graded. This is practice, and every round makes the next one easier.")
+                    .font(.subheadline)
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Breathe in for four counts, hold for four, out for four. Twice.", systemImage: "1.circle")
+                    Label("Say your first point to yourself in one plain sentence.", systemImage: "2.circle")
+                    Label("Remember you can take as long as you want between turns. There's no timer.", systemImage: "3.circle")
+                }
+                .font(.subheadline)
+                Text("The opponent will stay calm and courteous and take one or two points at a time. You can end the session whenever you like.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Button {
+                    ready = true
+                } label: {
+                    Text("I'm ready")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
+            .padding(16)
+        }
+    }
+
+    private var transcript: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    if messages.isEmpty {
+                        Text(intro)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
+
+                    ForEach(messages) { message in
+                        MessageBubble(message: message, mode: config.mode, language: config.language, showMetrics: showFillerMeter)
+                    }
+
+                    if isThinking {
+                        Text("Thinking…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let errorMessage {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(errorMessage)
+                                .font(.footnote)
+                                .foregroundStyle(Theme.danger)
+                            if !config.isJudged {
+                                Button("Retry") { config.mode == .team ? advanceIfAITurn() : requestReply() }
+                                    .buttonStyle(.bordered)
+                            }
+                        }
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .card()
+                    }
+
+                    Color.clear.frame(height: 1).id("bottom")
+                }
+                .padding(12)
+            }
+            .onChange(of: messages.count) { scrollToBottom(proxy) }
+            .onChange(of: isThinking) { scrollToBottom(proxy) }
+            .onChange(of: errorMessage) { scrollToBottom(proxy) }
+        }
+    }
+
+    private var composer: some View {
+        VStack(spacing: 8) {
+            if let cf = crossfirePrompt {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Crossfire question \(cf.index) of \(cf.total)", systemImage: "questionmark.bubble")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.accent)
+                    Text(cf.text)
+                        .font(.subheadline)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .card(fill: Theme.tint)
+            }
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField(crossfirePrompt != nil ? "Answer live…" : currentParticipant.map { "\($0.name)'s speech…" } ?? (config.mode == .briefing ? "Paste or type your draft…" : "Type your argument…"),
+                          text: $input, axis: .vertical)
+                    .lineLimit(1...(config.mode == .briefing ? 8 : 5))
+                    .textFieldStyle(.roundedBorder)
+                Button("Send") { send() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canSend)
+            }
+            if showFillerMeter && !input.isEmpty {
+                MeterBar(metrics: SpeechMetrics.analyze(input), compact: true)
+            }
+        }
+        .padding(12)
+        .background(Theme.surface)
+    }
+
+    private func scrollToBottom(_ proxy: ScrollViewProxy) {
+        proxy.scrollTo("bottom", anchor: .bottom)
+    }
+
+    private func send() {
+        let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard canSend else { return }
+        input = ""
+        let message: ChatMessage
+        if let p = currentParticipant {
+            message = ChatMessage(role: p.isUser ? .user : .assistant, text: text, speaker: p.name, kind: teamStep?.kind ?? .speech)
+        } else {
+            message = ChatMessage(role: .user, text: text, speaker: userName, kind: .speech)
+        }
+        messages.append(message)
+        if config.mode != .briefing && message.effectiveKind == .speech { runStatCheck(for: message) }
+        if config.mode == .team {
+            advanceIfAITurn()
+        } else if !config.isJudged {
+            requestReply()
+        }
+    }
+
+    private func advanceIfAITurn() {
+        guard config.mode == .team, !isThinking, let step = teamStep, step.slot == .ai else { return }
+        if step.kind == .crossfireQuestion { requestCrossfire() } else { requestReply() }
+    }
+
+    private func requestCrossfire() {
+        errorMessage = nil
+        isThinking = true
+        Task {
+            do {
+                let questions = try await app.claude.crossfireQuestions(config: config, history: messages)
+                let text = questions.enumerated().map { "\($0.offset + 1). \($0.element)" }.joined(separator: "\n")
+                messages.append(ChatMessage(role: .assistant, text: text, speaker: "Opposing team", kind: .crossfireQuestion))
+                if readAloud { Speaker.shared.speak(text, language: config.language) }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isThinking = false
+        }
+    }
+
+    private func runStatCheck(for message: ChatMessage) {
+        guard SpeechMetrics.containsStatistic(message.text) else { return }
+        Task {
+            guard let verdict = try? await app.claude.checkStatistics(in: message.text, topic: config.topic, language: config.language) else { return }
+            if let index = messages.firstIndex(where: { $0.id == message.id }) {
+                messages[index].statCheck = verdict
+            }
+        }
+    }
+
+    private func requestReply() {
+        errorMessage = nil
+        isThinking = true
+        Task {
+            do {
+                let reply = try await app.claude.liveTurn(config: config, history: messages)
+                let speaker = config.mode == .team ? "Opposing team" : config.mode.assistantLabel
+                messages.append(ChatMessage(role: .assistant, text: reply, speaker: speaker, kind: .speech))
+                if readAloud { Speaker.shared.speak(reply, language: config.language) }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isThinking = false
+            advanceIfAITurn()
+        }
+    }
+
+    private func endTapped() {
+        let enough: Bool
+        if config.isJudged {
+            let spoken = Set(messages.compactMap(\.speaker))
+            enough = config.participants.allSatisfy { spoken.contains($0.name) }
+        } else {
+            enough = messages.contains { $0.role == .user }
+        }
+        if enough {
+            showEndConfirm = true
+        } else if messages.isEmpty {
+            app.goHome()
+        } else {
+            errorMessage = config.isJudged ? "Every debater needs to speak at least once before the judge can decide." : "Say something first."
+        }
+    }
+
+    private func finish() {
+        Speaker.shared.stop()
+        app.path.append(Route.feedback(config, messages))
+    }
+}
+
+struct MessageBubble: View {
+    let message: ChatMessage
+    let mode: SessionMode
+    var language: Language = .english
+    var showMetrics: Bool = false
+
+    private var isUser: Bool { message.role == .user }
+
+    private var label: String {
+        if let speaker = message.speaker, mode.isMultiplayer { return speaker }
+        return isUser ? "You" : mode.assistantLabel
+    }
+
+    private var isHumanSpeech: Bool {
+        isUser || (mode.isJudged && message.role == .assistant)
+    }
+
+    var body: some View {
+        HStack {
+            if isUser { Spacer(minLength: 40) }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(message.effectiveKind == .crossfireAnswer ? "\(label) · crossfire answer" : label)
+                        .font(.caption)
+                        .foregroundStyle(isUser ? Color.white.opacity(0.85) : Color.secondary)
+                    Spacer()
+                    if !isHumanSpeech {
+                        ReadAloudButton(text: message.text, language: language)
+                    }
+                }
+
+                if message.effectiveKind == .crossfireQuestion {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Crossfire", systemImage: "questionmark.bubble")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Theme.accent)
+                        ForEach(Array(ChatMessage.questions(in: message.text).enumerated()), id: \.offset) { index, question in
+                            Text("\(index + 1). \(question)")
+                                .font(.subheadline)
+                        }
+                    }
+                } else if message.role == .assistant && mode == .coach {
+                    FeedbackSectionsView(feedback: FeedbackParser.parse(message.text), kind: .debate, compact: true)
+                } else {
+                    Text(message.text)
+                        .textSelection(.enabled)
+                }
+
+                if showMetrics && isHumanSpeech {
+                    let m = SpeechMetrics.analyze(message.text)
+                    Text("\(m.overall)% · \(m.fillerCount) filler\(m.fillerCount == 1 ? "" : "s") · \(m.toneLabel.lowercased())")
+                        .font(.caption2)
+                        .foregroundStyle(isUser ? Color.white.opacity(0.8) : Color.secondary)
+                }
+
+                if let check = message.statCheck {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Label("Stat check", systemImage: "checkmark.shield")
+                            .font(.caption.weight(.semibold))
+                        Text(check).font(.caption)
+                    }
+                    .padding(8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(isUser ? Color.white.opacity(0.15) : Theme.tint)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+            .padding(10)
+            .background(isUser ? Theme.accent : Theme.surface)
+            .foregroundStyle(isUser ? Color.white : Color.primary)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(isUser ? Color.clear : Theme.border))
+
+            if !isUser { Spacer(minLength: 40) }
+        }
+    }
+}
