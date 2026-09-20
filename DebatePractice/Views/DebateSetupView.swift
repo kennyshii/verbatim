@@ -1,8 +1,13 @@
 import SwiftUI
 
 struct DebateSetupView: View {
-    var initialTopic: String? = nil
-    var initialMode: SessionMode? = nil
+    let initialTopic: String?
+    let mode: SessionMode
+
+    init(initialTopic: String? = nil, initialMode: SessionMode? = nil) {
+        self.initialTopic = initialTopic
+        self.mode = initialMode ?? .debate
+    }
 
     @EnvironmentObject private var app: AppState
     @AppStorage("support.lowPressure") private var lowPressure = false
@@ -14,9 +19,7 @@ struct DebateSetupView: View {
     @State private var topicChoice: String = topicCategories[0].topics[0].text
     @State private var customTopic = ""
     @State private var difficulty: Difficulty = .medium
-    @State private var mode: SessionMode = .debate
     @State private var showSettings = false
-    @State private var appliedMode = false
     @FocusState private var customFocused: Bool
 
     @State private var online = false
@@ -61,7 +64,6 @@ struct DebateSetupView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 topicSection
-                modeSection
                 if mode.isMultiplayer { connectionSection }
                 if mode.isMultiplayer { sidesSection }
                 if mode.isJudged { judgeSection }
@@ -88,7 +90,7 @@ struct DebateSetupView: View {
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)
-        .navigationTitle("Set up your debate")
+        .navigationTitle("Set up \(mode.rawValue)")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showSettings) {
             SettingsView(message: "Add an Anthropic API key to start a debate.")
@@ -98,10 +100,6 @@ struct DebateSetupView: View {
 
     private func applyInitialTopic() {
         if displayName.isEmpty { displayName = app.currentUser?.username ?? "" }
-        if let initialMode, mode != initialMode, !appliedMode {
-            mode = initialMode
-            appliedMode = true
-        }
         guard let initialTopic, topicChoice != initialTopic, customTopic != initialTopic else { return }
         if let cat = topicCategories.first(where: { $0.topics.contains { $0.text == initialTopic } }) {
             category = cat
@@ -160,17 +158,6 @@ struct DebateSetupView: View {
                     Text("Topics from the National Speech & Debate Association: \(source)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-            }
-        }
-    }
-
-    private var modeSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Mode")
-            ForEach(SessionMode.options(for: .debate)) { m in
-                OptionCard(title: m.rawValue, subtitle: m.explanation, icon: m.icon, selected: mode == m) {
-                    mode = m
                 }
             }
         }
