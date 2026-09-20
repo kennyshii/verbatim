@@ -30,7 +30,6 @@ struct DebateSetupView: View {
     @State private var opponent2Name = ""
     @State private var userRoleIsCase = true
     @State private var judgePreset: JudgePreset = .novice
-    @State private var customJudge = ""
     @State private var isCreating = false
     @State private var createError: String?
 
@@ -40,7 +39,6 @@ struct DebateSetupView: View {
 
     private var canStart: Bool {
         guard !resolvedTopic.isEmpty, !isCreating else { return false }
-        if mode.isJudged && judgePreset == .custom && customJudge.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return false }
         if mode.isMultiplayer {
             if online { return !displayName.trimmingCharacters(in: .whitespaces).isEmpty }
             switch mode {
@@ -51,6 +49,25 @@ struct DebateSetupView: View {
             }
         }
         return true
+    }
+
+    private var blocker: String? {
+        if resolvedTopic.isEmpty { return "Pick or write a resolution first." }
+        guard mode.isMultiplayer else { return nil }
+        if online {
+            return displayName.trimmingCharacters(in: .whitespaces).isEmpty ? "Enter the display name other debaters will see." : nil
+        }
+        switch mode {
+        case .versus:
+            return opponentName.trimmingCharacters(in: .whitespaces).isEmpty ? "Enter your opponent's name to start." : nil
+        case .twoVtwo:
+            return [partnerName, opponentName, opponent2Name].contains { $0.trimmingCharacters(in: .whitespaces).isEmpty }
+                ? "Name all four debaters to start." : nil
+        case .team:
+            return partnerName.trimmingCharacters(in: .whitespaces).isEmpty ? "Enter your partner's name to start." : nil
+        default:
+            return nil
+        }
     }
 
     private var startLabel: String {
@@ -84,9 +101,16 @@ struct DebateSetupView: View {
                 .buttonStyle(PrimaryButton())
                 .disabled(!canStart)
                 .padding(.top, 4)
+
+                if let blocker, !isCreating {
+                    Label(blocker, systemImage: "info.circle")
+                        .font(.footnote)
+                        .foregroundStyle(Theme.sandText)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
             }
             .padding(20)
-            .padding(.bottom, 50)
+            .padding(.bottom, 100)
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)
@@ -229,38 +253,32 @@ struct DebateSetupView: View {
             SectionLabel(text: "Judge")
             HStack(spacing: 8) {
                 ForEach(JudgePreset.allCases) { preset in
-                    Chip(label: preset.rawValue, icon: preset == .novice ? "leaf" : preset == .varsity ? "bolt" : "pencil",
+                    Chip(label: preset.rawValue, icon: preset == .novice ? "leaf" : "bolt",
                          selected: judgePreset == preset) { judgePreset = preset }
                 }
             }
-            if judgePreset == .custom {
-                TextField("Write the judge's paradigm and instructions…", text: $customJudge, axis: .vertical)
-                    .lineLimit(4...10)
-                    .field()
-            } else {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("\(judgePreset.rawValue) judge instructions")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.accent)
-                    Text(judgePreset.instructions)
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    if judgePreset.sampleRFD != nil {
-                        DisclosureGroup("Sample reason for decision in this style") {
-                            Text(judgePreset.sampleRFD ?? "")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.top, 6)
-                        }
-                        .font(.caption.weight(.semibold))
-                        .tint(Theme.accent)
-                        .padding(.top, 4)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("\(judgePreset.rawValue) judge instructions")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Text(judgePreset.instructions)
+                    .font(.footnote)
+                    .foregroundStyle(Theme.secondaryText)
+                if let sample = judgePreset.sampleRFD {
+                    DisclosureGroup("Sample reason for decision in this style") {
+                        Text(sample)
+                            .font(.caption)
+                            .foregroundStyle(Theme.secondaryText)
+                            .padding(.top, 6)
                     }
+                    .font(.caption.weight(.semibold))
+                    .tint(Theme.accent)
+                    .padding(.top, 4)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .card(fill: Theme.tint)
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card(fill: Theme.tint)
         }
     }
 
@@ -299,7 +317,7 @@ struct DebateSetupView: View {
         config.userSide = userSide
         if mode.isJudged {
             config.judgePreset = judgePreset
-            config.judgeInstructions = judgePreset == .custom ? customJudge.trimmingCharacters(in: .whitespacesAndNewlines) : judgePreset.instructions
+            config.judgeInstructions = judgePreset.instructions
         }
         if mode.isMultiplayer && online {
             config.online = true

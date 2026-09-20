@@ -97,7 +97,7 @@ struct ProgressDashboardView: View {
                 }
             }
             .padding(20)
-            .padding(.bottom, 60)
+            .padding(.bottom, 80)
         }
         .background(Theme.background)
         .navigationTitle("Progress")

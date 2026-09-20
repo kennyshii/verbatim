@@ -124,7 +124,6 @@ enum Side: String, CaseIterable, Identifiable, Codable {
 enum JudgePreset: String, CaseIterable, Identifiable, Codable {
     case novice = "Novice"
     case varsity = "Varsity"
-    case custom = "Custom"
 
     var id: String { rawValue }
 
@@ -139,8 +138,6 @@ enum JudgePreset: String, CaseIterable, Identifiable, Codable {
             Both AFF and NEG had exceptionally strong Constructives. NEG made the argument that they only had the burden of proving that plea bargains are unjust, they did not have to provide an alternative, and I agreed with this. This shifted the burden to AFF to argue against the NEG contentions of Environmental Crimes and Racial Inequalities, both under the value criterion of Mitigating Structural Violence. AFF erred in my opinion by not recognizing that NEG wasn't arguing against plea bargaining. AFF spent a lot of time during 1AR repeating the AFF contentions (e.g., arguing that plea bargaining is better than getting rid of plea bargaining), but NEG had already stated that he wasn't advocating to get rid of plea bargaining so this was ultimately time wasted. AFF spent so much time on this during 1AR that she ran out of time to counter the second NEG contention of Racial Inequalities, which was in my opinion the stronger of the two NEG contentions. In the end, the NEG contention that plea bargains are unjust because they unfairly target minorities carried my vote. This included the arguments that the poor are more affected because they can't afford to sit in jail awaiting trial and be without a job; the police know that targeting minorities is more likely to result in conviction by plea bargain and help their numbers; etc. NEG also provided very strong statistics about the economic impact from any plea bargains and the impact on minorities.
             One piece of feedback for NEG is that the Environmental Crimes contention seemed a bit weak to me. I think NEG overshot the impact of companies polluting BECAUSE of plea bargaining, or that somehow plea bargaining in and of itself was making pollution worse. I understood the intention that there was precedent set and that companies always want to plea bargain out these cases so that they can pay a fine instead of being forced to change or go bankrupt. However, I didn't buy that the precedent prevents the government from deciding to take the next case (or the one after that) to trial to effectively reset the precedent if they wanted to. Basically, I thought that even though it may be physically harmful to our citizens for these environmental crime cases to get settled rather than shutting down the companies or forcing a change in their practices, I thought that this was due to a poor decision by the government to prosecute in this manner, rather than the plea bargaining practice itself being unjust.
             """
-        case .custom:
-            return nil
         }
     }
 
@@ -150,8 +147,6 @@ enum JudgePreset: String, CaseIterable, Identifiable, Codable {
             return "You are judging a novice round. Decide the round on the arguments as they were actually presented; do not intervene with your own knowledge or opinions. Reward clear claims, warrants, and direct clash. Give weight to arguments that were extended and answered over arguments that were dropped, but do not punish a novice harshly for minor drops or technical mistakes. Prioritize clarity, organization, and whether each side explained why their arguments matter. Do not reward speed, jargon, or theory arguments. Decide which side better upheld or negated the resolution overall, and explain the decision in plain language a first-year debater can learn from."
         case .varsity:
             return "You are judging a varsity round with a flow-based, tabula rasa paradigm. Vote on the flow: dropped arguments are conceded, extensions must include warrants, and impacts must be weighed explicitly by the debaters themselves. Reward impact calculus, framework debate, and direct comparison of evidence and warrants. Do not intervene with your own opinions or fill in arguments a debater did not make. Penalize new arguments in final speeches and extensions without warrants. Decide the round on the clearest path to the ballot each side offered, and write a rigorous reason for decision that names the specific arguments that decided the round."
-        case .custom:
-            return ""
         }
     }
 }

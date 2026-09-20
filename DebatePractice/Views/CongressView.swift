@@ -128,7 +128,7 @@ struct CommitteeDetailView: View {
                 .disabled(resolvedBill.isEmpty)
             }
             .padding(20)
-            .padding(.bottom, 50)
+            .padding(.bottom, 100)
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)

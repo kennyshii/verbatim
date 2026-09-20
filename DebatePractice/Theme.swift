@@ -37,26 +37,46 @@ extension View {
 
 struct PrimaryButton: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline)
-            .foregroundStyle(Color(red: 0.114, green: 0.145, blue: 0.251))
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(Theme.accent.opacity(configuration.isPressed ? 0.75 : 1))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        StyledLabel(configuration: configuration)
+    }
+
+    private struct StyledLabel: View {
+        @Environment(\.isEnabled) private var isEnabled
+        let configuration: Configuration
+
+        var body: some View {
+            configuration.label
+                .font(.headline)
+                .foregroundStyle(isEnabled ? Color(red: 0.114, green: 0.145, blue: 0.251) : Theme.secondaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(isEnabled ? Theme.accent.opacity(configuration.isPressed ? 0.75 : 1) : Theme.surfaceHigh)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(isEnabled ? Color.clear : Theme.border))
+        }
     }
 }
 
 struct SecondaryButton: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Theme.cream)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .background(Theme.surfaceHigh.opacity(configuration.isPressed ? 0.6 : 1))
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.border))
+        StyledLabel(configuration: configuration)
+    }
+
+    private struct StyledLabel: View {
+        @Environment(\.isEnabled) private var isEnabled
+        let configuration: Configuration
+
+        var body: some View {
+            configuration.label
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isEnabled ? Theme.cream : Theme.secondaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Theme.surfaceHigh.opacity(configuration.isPressed ? 0.6 : 1))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(Theme.border))
+                .opacity(isEnabled ? 1 : 0.6)
+        }
     }
 }
 

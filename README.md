@@ -4,7 +4,7 @@
 Congress with AI feedback, track their progress, and build confidence speaking. Native iOS app —
 SwiftUI + SQLite + the Anthropic Messages API. No package dependencies.
 
-The app is organised into four tabs: **Practice**, **Congress**, **Progress**, and **Settings**.
+The app is organised into four tabs: **Debate**, **Congress**, **Progress**, and **Settings**.
 
 ## Run it
 
@@ -16,7 +16,8 @@ The app is organised into four tabs: **Practice**, **Congress**, **Progress**, a
 
 ## What's built
 
-### Debate Practice
+### Debate
+- **Modes** are chosen on the Debate tab's home screen; the setup screen then configures that mode.
 - **Topics** — **Lincoln-Douglas** and **Public Forum**, carrying the current resolutions word-for-word
   from the National Speech & Debate Association (https://www.speechanddebate.org/topics/), each with its
   month range, plus a custom option. Five preset resolutions are suggested straight on the Home screen —
@@ -31,8 +32,8 @@ The app is organised into four tabs: **Practice**, **Congress**, **Progress**, a
   **crossfire**: the AI asks your team three questions, answered live one at a time, alternating between
   partners. Every AI speech also ends with two rhetorical crossfire questions to answer in your next turn.
 - **Judges** — **Novice** and **Varsity** presets, each carrying a real sample reason for decision that the
-  AI judge matches for voice, technical depth, and specificity, or write your own paradigm. The judge
-  returns a decision, a reason for decision, and feedback for each side.
+  AI judge matches for voice, technical depth, and specificity. The judge returns a decision, a reason
+  for decision, and feedback for each side.
 
 Language is set once in **Settings → Language** and applies to every round and all feedback.
 

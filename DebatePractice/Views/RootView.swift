@@ -12,7 +12,7 @@ struct RootView: View {
                     NavigationStack(path: $app.practicePath) {
                         HomeView().appRoutes()
                     }
-                    .tabItem { Label("Practice", systemImage: "bubble.left.and.bubble.right.fill") }
+                    .tabItem { Label("Debate", systemImage: "bubble.left.and.bubble.right.fill") }
                     .tag(AppTab.practice)
 
                     NavigationStack(path: $app.congressPath) {

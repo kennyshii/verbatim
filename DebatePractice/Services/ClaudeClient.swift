@@ -120,7 +120,7 @@ struct ClaudeClient {
     }
 
     static func judgeSystemPrompt(_ c: PracticeConfig, affirmative: String, negative: String) -> String {
-        let paradigm = c.judgePreset == .custom ? c.judgeInstructions : c.judgePreset.instructions
+        let paradigm = c.judgeInstructions.isEmpty ? c.judgePreset.instructions : c.judgeInstructions
         var prompt = """
         You are the judge of a debate on the resolution: \(c.topic). \(affirmative) argued the affirmative and \(negative) argued the negative. Judge paradigm and instructions: \(paradigm) Decide the round using only what was said in the transcript. Be specific: quote the debaters' own words when explaining what decided the round. Respond in \(c.language.rawValue).
         """
