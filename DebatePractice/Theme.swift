@@ -60,7 +60,7 @@ extension Font {
 
 extension View {
     func subtext(_ style: Font.TextStyle = .footnote) -> some View {
-        font(.brand(style, italic: true)).foregroundStyle(Theme.secondaryText)
+        font(.brand(style)).foregroundStyle(Theme.secondaryText)
     }
 
     func heading(_ style: Font.TextStyle = .headline, color: Color = Theme.cream) -> some View {
@@ -136,15 +136,15 @@ struct BrandHeader: View {
     var showsName: Bool = true
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .firstTextBaseline, spacing: size * 0.22) {
             Image("Logo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: size, height: size)
-                .clipShape(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
+                .frame(height: size * 0.46)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] + size * 0.04 }
             if showsName {
                 Text("Verbatim")
-                    .font(.brand(size: size * 0.62, weight: .bold))
+                    .font(.brand(size: size * 0.82, weight: .bold))
                     .foregroundStyle(Theme.cream)
             }
         }

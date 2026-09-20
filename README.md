@@ -143,14 +143,14 @@ place to change it. The icon and in-app logo live in `Assets.xcassets` as `AppIc
 
 **Type** is EB Garamond (SIL Open Font License; the licence ships in `DebatePractice/Fonts/OFL.txt`).
 The two variable font files are registered in `Info.plist` under `UIAppFonts`, and `Font.brand(...)` in
-`Theme.swift` maps every text style and weight onto them. Hierarchy is carried by three things rather
+`Theme.swift` maps every text style and weight onto them. Hierarchy is carried by weight and colour rather
 than size alone:
 
 | Role | Treatment |
 | --- | --- |
 | Headings and titles | Bold or semibold, cream |
 | Body and speech text | Regular, cream |
-| Subtext, hints, explanations | **Italic**, muted blue-grey (`.subtext()`) |
+| Subtext, hints, explanations | Regular, muted blue-grey (`.subtext()`) |
 | Section labels | Bold, uppercase, letter-spaced, muted |
 | Key labels and links | Coral accent |
 
