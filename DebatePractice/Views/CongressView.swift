@@ -16,8 +16,7 @@ struct CongressView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Pick your committee. Each one lists its jurisdiction, the agencies it oversees, links to the data sources members actually cite, and legislation to debate.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
+                    .subtext(.footnote)
                     .padding(.bottom, 4)
 
                 SectionLabel(text: "Committees")
@@ -31,8 +30,7 @@ struct CongressView: View {
 
                 if filtered.isEmpty {
                     Text("No committee matches that search.")
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.secondaryText)
+                        .subtext(.subheadline)
                         .padding(14)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .card()
@@ -54,28 +52,27 @@ struct CommitteeRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: "building.columns")
-                .font(.system(size: 17, weight: .semibold))
+                .font(.brand(size: 17, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .frame(width: 42, height: 42)
                 .background(Theme.accent.opacity(0.14))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(committee.name)
-                    .font(.body.weight(.semibold))
+                    .font(.brand(.body, weight: .semibold))
                     .foregroundStyle(Theme.cream)
                     .multilineTextAlignment(.leading)
                 Text(committee.chamber)
-                    .font(.caption2.weight(.semibold))
+                    .font(.brand(.caption2, weight: .semibold))
                     .foregroundStyle(Theme.accent)
                 Text(committee.jurisdiction)
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .subtext(.caption)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.brand(.caption, weight: .semibold))
                 .foregroundStyle(Theme.secondaryText)
         }
         .padding(14)
@@ -148,9 +145,9 @@ struct CommitteeDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(committee.chamber).font(.caption).foregroundStyle(.secondary)
-            Text(committee.fullName).font(.title3.weight(.semibold)).foregroundStyle(Theme.accent)
-            Text(committee.jurisdiction).font(.subheadline)
+            Text(committee.chamber).font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
+            Text(committee.fullName).font(.brand(.title3, weight: .semibold)).foregroundStyle(Theme.accent)
+            Text(committee.jurisdiction).font(.brand(.subheadline))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -169,20 +166,19 @@ struct CommitteeDetailView: View {
                     Link(destination: URL(string: source.url) ?? URL(string: "https://www.congress.gov")!) {
                         HStack(spacing: 10) {
                             Image(systemName: "link")
-                                .font(.footnote)
+                                .font(.brand(.footnote))
                                 .foregroundStyle(Theme.accent)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(source.title)
-                                    .font(.subheadline)
+                                    .font(.brand(.subheadline))
                                     .foregroundStyle(Color.primary)
                                 Text(source.url.replacingOccurrences(of: "https://", with: ""))
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .subtext(.caption2)
                             }
                             Spacer(minLength: 0)
                             Image(systemName: "arrow.up.right.square")
-                                .font(.footnote)
-                                .foregroundStyle(.tertiary)
+                                .font(.brand(.footnote))
+                                .foregroundStyle(Theme.secondaryText.opacity(0.65))
                         }
                         .padding(.vertical, 10)
                         .contentShape(Rectangle())
@@ -204,8 +200,7 @@ struct CommitteeDetailView: View {
             .buttonStyle(.bordered)
             .tint(Theme.accent)
             Text("Pull a figure for this committee's area with its source, so you can check it before using it at the podium.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .subtext(.caption)
         }
     }
 
@@ -244,23 +239,22 @@ struct CommitteeDetailView: View {
             }
 
             if let importError {
-                Text(importError).font(.footnote).foregroundStyle(Theme.danger)
+                Text(importError).font(.brand(.footnote)).foregroundStyle(Theme.danger)
             }
 
             if useUpload && !uploadedText.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Bill title used in the round").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text("Bill title used in the round").font(.brand(.caption, weight: .semibold)).foregroundStyle(Theme.secondaryText)
                     TextField("A Bill to…", text: $uploadedTitle, axis: .vertical)
                         .lineLimit(1...3)
                         .field()
                     DisclosureGroup("Preview the text that was read") {
                         Text(uploadedText.prefix(1500) + (uploadedText.count > 1500 ? "…" : ""))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .subtext(.caption)
                             .textSelection(.enabled)
                             .padding(.top, 6)
                     }
-                    .font(.caption.weight(.semibold))
+                    .font(.brand(.caption, weight: .semibold))
                     .tint(Theme.accent)
                 }
             }
@@ -278,8 +272,7 @@ struct CommitteeDetailView: View {
             Text(side == .affirmative
                  ? "You sponsor the bill and give the authorship speech. The AI member speaks against it."
                  : "The AI member sponsors the bill and gives the authorship speech from the author's perspective. You speak against it — useful when you've uploaded an opponent's bill.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .subtext(.footnote)
         }
     }
 
@@ -291,35 +284,35 @@ struct CommitteeDetailView: View {
                     let mine = (segment.stance == .pro) == (side == .affirmative)
                     HStack(spacing: 10) {
                         Text("\(index + 1)")
-                            .font(.caption.weight(.bold))
+                            .font(.brand(.caption, weight: .bold))
                             .foregroundStyle(Color.white)
                             .frame(width: 20, height: 20)
                             .background(mine ? Theme.accent : Color.secondary)
                             .clipShape(Circle())
                         Text("\(mine ? "You" : "AI member") — \(segment.title) (\(segment.stance.rawValue))")
-                            .font(.subheadline)
+                            .font(.brand(.subheadline))
                         Spacer(minLength: 0)
                         Text(segment.clock)
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            .font(.brand(.caption, weight: .semibold))
+                            .foregroundStyle(Theme.secondaryText)
                     }
                 }
                 Divider()
                 HStack(spacing: 10) {
                     Image(systemName: "hand.wave")
-                        .font(.caption)
+                        .font(.brand(.caption))
                         .foregroundStyle(Theme.accent)
                         .frame(width: 20)
                     Text("Then you choose: speak again, or yield the floor and let the AI move an amendment if one is warranted.")
-                        .font(.subheadline)
+                        .font(.brand(.subheadline))
                 }
                 HStack(spacing: 10) {
                     Image(systemName: "questionmark.circle")
-                        .font(.caption)
+                        .font(.brand(.caption))
                         .foregroundStyle(Theme.accent)
                         .frame(width: 20)
                     Text("Rise to a point of inquiry any time — a separate parliamentarian AI answers it.")
-                        .font(.subheadline)
+                        .font(.brand(.subheadline))
                 }
             }
             .padding(12)
@@ -379,8 +372,7 @@ struct StatLookupSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Ask for a number in this committee's area. You'll get the figure, how to use it, and the source that publishes it.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
 
                     TextField("e.g. How many satellites are in orbit right now?", text: $question, axis: .vertical)
                         .lineLimit(1...3)
@@ -406,10 +398,10 @@ struct StatLookupSheet: View {
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "sparkle.magnifyingglass")
-                                            .font(.caption)
+                                            .font(.brand(.caption))
                                             .foregroundStyle(Theme.accent)
                                         Text(suggestion)
-                                            .font(.subheadline)
+                                            .font(.brand(.subheadline))
                                             .foregroundStyle(Color.primary)
                                             .multilineTextAlignment(.leading)
                                         Spacer(minLength: 0)
@@ -425,7 +417,7 @@ struct StatLookupSheet: View {
                     }
 
                     if let errorMessage {
-                        Text(errorMessage).font(.footnote).foregroundStyle(Theme.danger)
+                        Text(errorMessage).font(.brand(.footnote)).foregroundStyle(Theme.danger)
                     }
 
                     if let answer {
@@ -436,7 +428,7 @@ struct StatLookupSheet: View {
                                 ReadAloudButton(text: answer, language: language)
                             }
                             Text(answer)
-                                .font(.subheadline)
+                                .font(.brand(.subheadline))
                                 .textSelection(.enabled)
                         }
                         .padding(12)
@@ -444,17 +436,16 @@ struct StatLookupSheet: View {
                         .card()
 
                         Text("This comes from the model's training data, not a live feed — anything marked (verify) should be checked against the source links before you use it in a round.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .subtext(.caption)
 
                         SectionLabel(text: "Check it here")
                         ForEach(committee.sources) { source in
                             Link(destination: URL(string: source.url) ?? URL(string: "https://www.congress.gov")!) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "link").font(.caption).foregroundStyle(Theme.accent)
-                                    Text(source.title).font(.subheadline).foregroundStyle(Color.primary)
+                                    Image(systemName: "link").font(.brand(.caption)).foregroundStyle(Theme.accent)
+                                    Text(source.title).font(.brand(.subheadline)).foregroundStyle(Color.primary)
                                     Spacer(minLength: 0)
-                                    Image(systemName: "arrow.up.right.square").font(.caption).foregroundStyle(.tertiary)
+                                    Image(systemName: "arrow.up.right.square").font(.brand(.caption)).foregroundStyle(Theme.secondaryText.opacity(0.65))
                                 }
                                 .padding(10)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -499,7 +490,7 @@ struct FlowChips: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(items, id: \.self) { item in
                 Text(item)
-                    .font(.subheadline)
+                    .font(.brand(.subheadline))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .background(Theme.surface)

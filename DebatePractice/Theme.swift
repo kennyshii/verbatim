@@ -17,6 +17,57 @@ enum Theme {
     static let corner: CGFloat = 16
 }
 
+enum BrandFont {
+    static func name(_ weight: Font.Weight, italic: Bool) -> String {
+        let suffix: String
+        switch weight {
+        case .bold, .heavy, .black: suffix = "Bold"
+        case .semibold: suffix = "SemiBold"
+        case .medium: suffix = "Medium"
+        default: suffix = italic ? "" : "Regular"
+        }
+        if italic { return suffix.isEmpty ? "EBGaramond-Italic" : "EBGaramond-\(suffix)Italic" }
+        return "EBGaramond-\(suffix)"
+    }
+
+    static func size(_ style: Font.TextStyle) -> CGFloat {
+        switch style {
+        case .largeTitle: return 37
+        case .title: return 31
+        case .title2: return 25
+        case .title3: return 22
+        case .headline: return 19
+        case .body: return 19
+        case .callout: return 18
+        case .subheadline: return 17
+        case .footnote: return 15
+        case .caption: return 14
+        case .caption2: return 13
+        @unknown default: return 19
+        }
+    }
+}
+
+extension Font {
+    static func brand(_ style: Font.TextStyle = .body, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
+        .custom(BrandFont.name(weight, italic: italic), size: BrandFont.size(style), relativeTo: style)
+    }
+
+    static func brand(size: CGFloat, weight: Font.Weight = .regular, italic: Bool = false) -> Font {
+        .custom(BrandFont.name(weight, italic: italic), size: size)
+    }
+}
+
+extension View {
+    func subtext(_ style: Font.TextStyle = .footnote) -> some View {
+        font(.brand(style, italic: true)).foregroundStyle(Theme.secondaryText)
+    }
+
+    func heading(_ style: Font.TextStyle = .headline, color: Color = Theme.cream) -> some View {
+        font(.brand(style, weight: .semibold)).foregroundStyle(color)
+    }
+}
+
 struct CardStyle: ViewModifier {
     var fill: Color = Theme.surface
     var radius: CGFloat = Theme.corner
@@ -46,7 +97,7 @@ struct PrimaryButton: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.headline)
+                .font(.brand(.headline, weight: .semibold))
                 .foregroundStyle(isEnabled ? Color(red: 0.114, green: 0.145, blue: 0.251) : Theme.secondaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
@@ -68,7 +119,7 @@ struct SecondaryButton: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.subheadline.weight(.semibold))
+                .font(.brand(.subheadline, weight: .semibold))
                 .foregroundStyle(isEnabled ? Theme.cream : Theme.secondaryText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
@@ -93,7 +144,7 @@ struct BrandHeader: View {
                 .clipShape(RoundedRectangle(cornerRadius: size * 0.24, style: .continuous))
             if showsName {
                 Text("Verbatim")
-                    .font(.system(size: size * 0.62, weight: .bold, design: .default))
+                    .font(.brand(size: size * 0.62, weight: .bold))
                     .foregroundStyle(Theme.cream)
             }
         }
@@ -103,6 +154,7 @@ struct BrandHeader: View {
 struct FieldBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
+            .font(.brand(.body))
             .foregroundStyle(Theme.cream)
             .tint(Theme.accent)
             .padding(.horizontal, 14)

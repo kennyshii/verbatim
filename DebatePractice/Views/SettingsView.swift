@@ -35,8 +35,7 @@ struct SettingsView: View {
                         ForEach(Language.allCases) { Text($0.rawValue).tag($0.rawValue) }
                     }
                     Text("Every debate, congress round, and piece of feedback is written in this language.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                 } header: {
                     Text("Language")
                 }
@@ -47,28 +46,28 @@ struct SettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Low-pressure mode")
                             Text("A short grounding step before each round, a calmer opponent, and shorter replies. Same rigor, less intensity.")
-                                .font(.footnote).foregroundStyle(.secondary)
+                                .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                         }
                     }
                     Toggle(isOn: $plainLanguage) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Plain-language feedback")
                             Text("Short sentences, everyday words, jargon defined.")
-                                .font(.footnote).foregroundStyle(.secondary)
+                                .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                         }
                     }
                     Toggle(isOn: $readAloud) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Read replies aloud")
                             Text("Speaks each AI reply automatically. A speaker button is always available on replies and feedback.")
-                                .font(.footnote).foregroundStyle(.secondary)
+                                .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                         }
                     }
                     Toggle(isOn: $showFillerMeter) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Show filler-word meter")
                             Text("Live presentational-accuracy bar under the composer. Turn off to reduce clutter.")
-                                .font(.footnote).foregroundStyle(.secondary)
+                                .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                         }
                     }
                 } header: {
@@ -84,8 +83,7 @@ struct SettingsView: View {
                         .autocorrectionDisabled()
                         .keyboardType(.URL)
                     Text("Online 1v1, 2v2, and team rounds sync through the relay in the `server` folder of this project. Run `node server.js` and leave this blank for the simulator, or host it anywhere and paste its URL here so friends can join from their own phones.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                 } header: {
                     Text("Online rounds — relay server")
                 }
@@ -96,8 +94,7 @@ struct SettingsView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     Text("Stored in the iOS Keychain on this device only. Get a key at console.anthropic.com.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                     Button("Save key") {
                         app.setAPIKey(key)
                         dismiss()

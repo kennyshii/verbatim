@@ -30,8 +30,7 @@ struct ProgressDashboardView: View {
                     StatTile(value: averageAccuracy.map { "\($0)%" } ?? "—", label: "Avg. accuracy", icon: "waveform")
                 }
                 Text("Streak counts consecutive days with at least one completed session. Presentational accuracy blends filler words (−5 each), smoothness, and tone.")
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
+                    .subtext(.footnote)
 
                 VStack(alignment: .leading, spacing: 10) {
                     SectionLabel(text: "Recurring feedback")
@@ -43,12 +42,11 @@ struct ProgressDashboardView: View {
                         ForEach(tags) { tag in
                             HStack {
                                 Text(tag.name)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(.brand(.subheadline, weight: .semibold))
                                     .foregroundStyle(Theme.cream)
                                 Spacer()
                                 Text("flagged in \(tag.count) sessions")
-                                    .font(.caption)
-                                    .foregroundStyle(Theme.secondaryText)
+                                    .subtext(.caption)
                             }
                             .padding(14)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -66,24 +64,23 @@ struct ProgressDashboardView: View {
                             NavigationLink(value: Route.sessionDetail(session)) {
                                 HStack(spacing: 14) {
                                     Image(systemName: session.kind.icon)
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .font(.brand(size: 15, weight: .semibold))
                                         .foregroundStyle(Theme.accent)
                                         .frame(width: 38, height: 38)
                                         .background(Theme.accent.opacity(0.14))
                                         .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
                                     VStack(alignment: .leading, spacing: 3) {
                                         Text(session.topic)
-                                            .font(.subheadline.weight(.semibold))
+                                            .font(.brand(.subheadline, weight: .semibold))
                                             .foregroundStyle(Theme.cream)
                                             .multilineTextAlignment(.leading)
                                             .lineLimit(2)
                                         Text("\(session.createdDisplay) · \(session.mode) · \(SpeechMetrics.analyze(turns: session.ownTurns).overall)%")
-                                            .font(.caption)
-                                            .foregroundStyle(Theme.secondaryText)
+                                            .subtext(.caption)
                                     }
                                     Spacer(minLength: 0)
                                     Image(systemName: "chevron.right")
-                                        .font(.caption.weight(.semibold))
+                                        .font(.brand(.caption, weight: .semibold))
                                         .foregroundStyle(Theme.secondaryText)
                                 }
                                 .padding(14)
@@ -107,8 +104,7 @@ struct ProgressDashboardView: View {
 
     private func emptyCard(_ text: String) -> some View {
         Text(text)
-            .font(.subheadline)
-            .foregroundStyle(Theme.secondaryText)
+            .subtext(.subheadline)
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .card()
@@ -133,21 +129,20 @@ struct SessionDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(session.kind.subjectLabel).font(.caption).foregroundStyle(.secondary)
-                    Text(session.topic).font(.headline).foregroundStyle(Theme.accent)
+                    Text(session.kind.subjectLabel).font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
+                    Text(session.topic).font(.brand(.headline, weight: .semibold)).foregroundStyle(Theme.accent)
                     Text("\(session.createdDisplay) · \(session.mode) · \(session.difficulty) · \(session.language)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .subtext(.caption)
                 }
 
-                Text(session.sessionMode.isJudged ? "Decision" : "Feedback").font(.title3).bold().foregroundStyle(Theme.accent)
+                Text(session.sessionMode.isJudged ? "Decision" : "Feedback").font(.brand(.title3, weight: .semibold)).bold().foregroundStyle(Theme.accent)
                 switch session.feedback {
                 case .coach(let f):
                     FeedbackSectionsView(feedback: f, kind: session.kind, compact: false, language: language)
                 case .judge(let decision):
                     JudgeDecisionView(decision: decision, affirmative: "Affirmative", negative: "Negative", language: language)
                 case nil:
-                    Text("No feedback was saved for this session.").foregroundStyle(.secondary)
+                    Text("No feedback was saved for this session.").foregroundStyle(Theme.secondaryText)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -158,7 +153,7 @@ struct SessionDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .card()
 
-                Text("Transcript").font(.title3).bold().foregroundStyle(Theme.accent)
+                Text("Transcript").font(.brand(.title3, weight: .semibold)).bold().foregroundStyle(Theme.accent)
                 ForEach(session.transcript) { message in
                     MessageBubble(message: message, mode: session.sessionMode, language: language)
                 }

@@ -33,16 +33,16 @@ struct HomeView: View {
                         } label: {
                             HStack(alignment: .top, spacing: 10) {
                                 Image(systemName: "quote.opening")
-                                    .font(.caption)
+                                    .font(.brand(.caption))
                                     .foregroundStyle(Theme.accent)
                                     .padding(.top, 3)
                                 Text(resolution)
-                                    .font(.subheadline)
+                                    .font(.brand(.subheadline))
                                     .foregroundStyle(Theme.cream)
                                     .multilineTextAlignment(.leading)
                                 Spacer(minLength: 0)
                                 Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.semibold))
+                                    .font(.brand(.caption, weight: .semibold))
                                     .foregroundStyle(Theme.secondaryText)
                             }
                             .padding(14)
@@ -61,7 +61,7 @@ struct HomeView: View {
 
                 if !app.hasAPIKey {
                     Label("Add an Anthropic API key in Settings to start a round.", systemImage: "key")
-                        .font(.footnote)
+                        .font(.brand(.footnote))
                         .foregroundStyle(Theme.sandText)
                         .padding(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -79,8 +79,7 @@ struct HomeView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Log out") { app.logout() }
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.secondaryText)
+                    .subtext(.subheadline)
             }
         }
         .sheet(isPresented: $showJoin) { JoinRoomSheet() }
@@ -94,18 +93,17 @@ struct HomeView: View {
                     .fill(streak.current > 0 ? Theme.success : Theme.secondaryText)
                     .frame(width: 8, height: 8)
                 Text(streak.current > 0 ? "Streak active" : "No active streak")
-                    .font(.caption.weight(.semibold))
+                    .font(.brand(.caption, weight: .semibold))
                     .foregroundStyle(streak.current > 0 ? Theme.success : Theme.secondaryText)
                 Spacer()
                 if let user = app.currentUser {
                     Text(user.username)
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryText)
+                        .subtext(.caption)
                 }
             }
 
             Text(streak.current > 0 ? "\(streak.current)-day streak" : "Ready to practice")
-                .font(.system(size: 30, weight: .bold))
+                .font(.brand(size: 30, weight: .bold))
                 .foregroundStyle(Theme.cream)
 
             HStack(spacing: 0) {
@@ -131,11 +129,10 @@ struct HomeView: View {
     private func metric(_ label: String, _ value: String) -> some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font(.brand(.headline, weight: .semibold))
                 .foregroundStyle(Theme.cream)
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(Theme.secondaryText)
+                .subtext(.caption2)
         }
         .frame(maxWidth: .infinity)
     }
@@ -160,24 +157,23 @@ struct ModeRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: mode.icon)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.brand(size: 17, weight: .semibold))
                 .foregroundStyle(Theme.accent)
                 .frame(width: 42, height: 42)
                 .background(Theme.accent.opacity(0.14))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text(mode.rawValue)
-                    .font(.body.weight(.semibold))
+                    .font(.brand(.body, weight: .semibold))
                     .foregroundStyle(Theme.cream)
                 Text(mode.explanation)
-                    .font(.caption)
-                    .foregroundStyle(Theme.secondaryText)
+                    .subtext(.caption)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(.brand(.caption, weight: .semibold))
                 .foregroundStyle(Theme.secondaryText)
         }
         .padding(14)

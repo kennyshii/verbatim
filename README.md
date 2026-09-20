@@ -141,6 +141,22 @@ The logo and palette come from `verbatimlogo.png`: navy `#1D2540`, cream `#F6F1E
 The app runs in a dark, brand-coloured theme throughout; `DebatePractice/Theme.swift` is the single
 place to change it. The icon and in-app logo live in `Assets.xcassets` as `AppIcon` and `Logo`.
 
+**Type** is EB Garamond (SIL Open Font License; the licence ships in `DebatePractice/Fonts/OFL.txt`).
+The two variable font files are registered in `Info.plist` under `UIAppFonts`, and `Font.brand(...)` in
+`Theme.swift` maps every text style and weight onto them. Hierarchy is carried by three things rather
+than size alone:
+
+| Role | Treatment |
+| --- | --- |
+| Headings and titles | Bold or semibold, cream |
+| Body and speech text | Regular, cream |
+| Subtext, hints, explanations | **Italic**, muted blue-grey (`.subtext()`) |
+| Section labels | Bold, uppercase, letter-spaced, muted |
+| Key labels and links | Coral accent |
+
+The judge's paradigm is no longer shown in the app — it is still sent to the AI judge, but the setup
+screen only offers the Novice / Varsity choice.
+
 The Xcode target and folder are still named `DebatePractice` internally, and the bundle id is still
 `com.debatepractice.app` so existing accounts and the stored API key survive the rename. The built app,
 its display name, and everything a user sees say **Verbatim**.

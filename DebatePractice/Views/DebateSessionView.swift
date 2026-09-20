@@ -179,10 +179,9 @@ struct PracticeSessionView: View {
     private var pinnedHeader: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(config.kind == .congress ? config.committee : config.kind.subjectLabel)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .subtext(.caption)
             Text(config.topic)
-                .font(.headline)
+                .font(.brand(.headline, weight: .semibold))
                 .foregroundStyle(Theme.accent)
             if let p = currentParticipant {
                 HStack(spacing: 6) {
@@ -193,7 +192,7 @@ struct PracticeSessionView: View {
                         Text("Now speaking: \(p.name) · \(p.side.rawValue) · \(p.role)")
                     }
                 }
-                .font(.caption.weight(.semibold))
+                .font(.brand(.caption, weight: .semibold))
                 .foregroundStyle(Theme.sandText)
                 .padding(.vertical, 4)
                 .padding(.horizontal, 8)
@@ -203,8 +202,7 @@ struct PracticeSessionView: View {
                 congressBanner
             } else {
                 Text("\(config.mode.rawValue) · \(config.difficulty.rawValue) · \(config.language.rawValue)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .subtext(.caption)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -222,7 +220,7 @@ struct PracticeSessionView: View {
                      : "AI member — \(segment.title) (\(segment.stance.rawValue), \(segment.clock))")
                 if mine {
                     Text(remaining <= 0 && timerRunning ? "over time" : clockText)
-                        .font(.caption.monospacedDigit().weight(.bold))
+                        .font(.brand(.caption, weight: .bold))
                         .foregroundStyle(remaining <= 0 && timerRunning ? Theme.danger : Theme.sandText)
                 }
             } else {
@@ -230,7 +228,7 @@ struct PracticeSessionView: View {
                 Text("Main speeches complete — the floor is open")
             }
         }
-        .font(.caption.weight(.semibold))
+        .font(.brand(.caption, weight: .semibold))
         .foregroundStyle(Theme.sandText)
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
@@ -242,26 +240,25 @@ struct PracticeSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 Image(systemName: "heart")
-                    .font(.title)
+                    .font(.brand(.title, weight: .bold))
                     .foregroundStyle(Theme.accent)
                 Text("Before you start")
-                    .font(.title3.weight(.semibold))
+                    .font(.brand(.title3, weight: .semibold))
                 Text("Nobody is watching. Nothing here is graded. This is practice, and every round makes the next one easier.")
-                    .font(.subheadline)
+                    .font(.brand(.subheadline))
                 VStack(alignment: .leading, spacing: 8) {
                     Label("Breathe in for four counts, hold for four, out for four. Twice.", systemImage: "1.circle")
                     Label("Say your first point to yourself in one plain sentence.", systemImage: "2.circle")
                     Label("Remember you can take as long as you want between turns. There's no timer.", systemImage: "3.circle")
                 }
-                .font(.subheadline)
+                .font(.brand(.subheadline))
                 Text("The opponent will stay calm and courteous and take one or two points at a time. You can end the session whenever you like.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .subtext(.footnote)
                 Button {
                     ready = true
                 } label: {
                     Text("I'm ready")
-                        .font(.headline)
+                        .font(.brand(.headline, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }
@@ -280,8 +277,7 @@ struct PracticeSessionView: View {
                 LazyVStack(alignment: .leading, spacing: 12) {
                     if messages.isEmpty {
                         Text(intro)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .subtext(.subheadline)
                             .padding(.top, 8)
                     }
 
@@ -291,14 +287,13 @@ struct PracticeSessionView: View {
 
                     if isThinking {
                         Text("Thinking…")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .subtext(.subheadline)
                     }
 
                     if let errorMessage {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(errorMessage)
-                                .font(.footnote)
+                                .font(.brand(.footnote))
                                 .foregroundStyle(Theme.danger)
                             if !config.isJudged {
                                 Button("Retry") { advanceIfAITurn() }
@@ -323,8 +318,7 @@ struct PracticeSessionView: View {
     private var floorChoice: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("The main speeches are done. Take the floor again, or yield and let the other member move an amendment.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .subtext(.footnote)
             HStack(spacing: 10) {
                 Button {
                     floorSpeaking = true
@@ -357,10 +351,10 @@ struct PracticeSessionView: View {
             if let cf = crossfirePrompt {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("Crossfire question \(cf.index) of \(cf.total)", systemImage: "questionmark.bubble")
-                        .font(.caption.weight(.semibold))
+                        .font(.brand(.caption, weight: .semibold))
                         .foregroundStyle(Theme.accent)
                     Text(cf.text)
-                        .font(.subheadline)
+                        .font(.brand(.subheadline))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
@@ -379,8 +373,7 @@ struct PracticeSessionView: View {
             }
             if inquiryPending {
                 Label("The parliamentarian is looking that up…", systemImage: "hand.raised")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .subtext(.caption)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -550,8 +543,7 @@ struct InquirySheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Rise to a point of inquiry. A separate parliamentarian AI — not your opponent — will rule on it or look it up, then tell you where to verify the answer.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                     TextField("e.g. What is the current federal deficit? Or: is a motion to amend in order right now?", text: $text, axis: .vertical)
                         .lineLimit(2...6)
                         .field()
@@ -565,8 +557,7 @@ struct InquirySheet: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(pending || text.trimmingCharacters(in: .whitespaces).isEmpty)
                     Text("Inquiries and rulings go into the record but are not scored as speeches.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .subtext(.caption)
                 }
                 .padding(20)
             }
@@ -609,7 +600,7 @@ struct MessageBubble: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(message.effectiveKind == .crossfireAnswer ? "\(label) · crossfire answer" : label)
-                        .font(.caption)
+                        .font(.brand(.caption))
                         .foregroundStyle(isUser ? Color.white.opacity(0.85) : Color.secondary)
                     Spacer()
                     if !isHumanSpeech {
@@ -621,25 +612,25 @@ struct MessageBubble: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Label(message.effectiveKind == .inquiry ? "Point of inquiry" : "The chair rules",
                               systemImage: message.effectiveKind == .inquiry ? "hand.raised" : "gavel")
-                            .font(.caption.weight(.semibold))
+                            .font(.brand(.caption, weight: .semibold))
                             .foregroundStyle(isUser ? Color.white.opacity(0.9) : Theme.accent)
                         Text(message.text).textSelection(.enabled)
                     }
                 } else if message.effectiveKind == .amendment {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Amendment", systemImage: "doc.badge.plus")
-                            .font(.caption.weight(.semibold))
+                            .font(.brand(.caption, weight: .semibold))
                             .foregroundStyle(isUser ? Color.white.opacity(0.9) : Theme.accent)
                         Text(message.text).textSelection(.enabled)
                     }
                 } else if message.effectiveKind == .crossfireQuestion {
                     VStack(alignment: .leading, spacing: 6) {
                         Label("Crossfire", systemImage: "questionmark.bubble")
-                            .font(.caption.weight(.semibold))
+                            .font(.brand(.caption, weight: .semibold))
                             .foregroundStyle(Theme.accent)
                         ForEach(Array(ChatMessage.questions(in: message.text).enumerated()), id: \.offset) { index, question in
                             Text("\(index + 1). \(question)")
-                                .font(.subheadline)
+                                .font(.brand(.subheadline))
                         }
                     }
                 } else if message.role == .assistant && mode == .coach {
@@ -652,15 +643,15 @@ struct MessageBubble: View {
                 if showMetrics && isHumanSpeech {
                     let m = SpeechMetrics.analyze(message.text)
                     Text("\(m.overall)% · \(m.fillerCount) filler\(m.fillerCount == 1 ? "" : "s") · \(m.toneLabel.lowercased())")
-                        .font(.caption2)
+                        .font(.brand(.caption2))
                         .foregroundStyle(isUser ? Color.white.opacity(0.8) : Color.secondary)
                 }
 
                 if let check = message.statCheck {
                     VStack(alignment: .leading, spacing: 3) {
                         Label("Stat check", systemImage: "checkmark.shield")
-                            .font(.caption.weight(.semibold))
-                        Text(check).font(.caption)
+                            .font(.brand(.caption, weight: .semibold))
+                        Text(check).font(.brand(.caption))
                     }
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)

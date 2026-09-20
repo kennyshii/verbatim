@@ -87,14 +87,14 @@ struct DebateSetupView: View {
                 ChoiceSections(difficulty: $difficulty)
 
                 if let createError {
-                    Text(createError).font(.footnote).foregroundStyle(Theme.danger)
+                    Text(createError).font(.brand(.footnote)).foregroundStyle(Theme.danger)
                 }
 
                 Button {
                     start()
                 } label: {
                     Text(isCreating ? "Creating room…" : startLabel)
-                        .font(.headline)
+                        .font(.brand(.headline, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }
@@ -104,7 +104,7 @@ struct DebateSetupView: View {
 
                 if let blocker, !isCreating {
                     Label(blocker, systemImage: "info.circle")
-                        .font(.footnote)
+                        .font(.brand(.footnote))
                         .foregroundStyle(Theme.sandText)
                         .frame(maxWidth: .infinity, alignment: .center)
                 }
@@ -139,8 +139,7 @@ struct DebateSetupView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(text: "Resolution")
             Text(mode.isMultiplayer ? "Pick sides below." : "You argue for it. In Debate mode the AI argues against.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .subtext(.footnote)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
@@ -163,14 +162,13 @@ struct DebateSetupView: View {
             if useCustomTopic {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Write your own resolution")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.brand(.subheadline, weight: .semibold))
                     TextField("e.g. Resolved: Cities should ban cars downtown.", text: $customTopic, axis: .vertical)
                         .lineLimit(1...3)
                         .focused($customFocused)
                         .field()
                     Text("Phrase it as a claim you can argue for, not a question.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                 }
             } else {
                 ForEach(category.topics) { topic in
@@ -180,8 +178,7 @@ struct DebateSetupView: View {
                 }
                 if let source = category.source {
                     Text("Topics from the National Speech & Debate Association: \(source)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .subtext(.caption)
                 }
             }
         }
@@ -196,14 +193,12 @@ struct DebateSetupView: View {
             }
             if online {
                 Text("You'll get a six-character code to share. The other \(mode.humanCount - 1 == 1 ? "debater joins" : "\(mode.humanCount - 1) debaters join") from their own phones with \"Join a round with a code\" — no account needed. Uses the relay server set in Settings.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .subtext(.footnote)
                 TextField("Your display name", text: $displayName)
                     .field()
             } else {
                 Text("Pass this phone around. Each debater types their speech when the header says it's their turn.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .subtext(.footnote)
                 switch mode {
                 case .versus:
                     TextField("Opponent's name", text: $opponentName).padding(12).card()
@@ -224,8 +219,7 @@ struct DebateSetupView: View {
                     Chip(label: "I rebut", icon: "arrow.uturn.left", selected: !userRoleIsCase) { userRoleIsCase = false }
                 }
                 Text(online ? "The first person to join takes the other role." : "\(partnerName.isEmpty ? "Your partner" : partnerName) takes the other role. The case speaker opens; the AI answers every speech and asks crossfire questions.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .subtext(.footnote)
             }
         }
     }
@@ -243,8 +237,7 @@ struct DebateSetupView: View {
                  : mode == .twoVtwo
                     ? "Speaking order: first speakers alternate, then second speakers. \(userSide == .affirmative ? "Your team" : "The other team") opens."
                     : "The affirmative speaks first.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .subtext(.footnote)
         }
     }
 
@@ -257,28 +250,6 @@ struct DebateSetupView: View {
                          selected: judgePreset == preset) { judgePreset = preset }
                 }
             }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("\(judgePreset.rawValue) judge instructions")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Theme.accent)
-                Text(judgePreset.instructions)
-                    .font(.footnote)
-                    .foregroundStyle(Theme.secondaryText)
-                if let sample = judgePreset.sampleRFD {
-                    DisclosureGroup("Sample reason for decision in this style") {
-                        Text(sample)
-                            .font(.caption)
-                            .foregroundStyle(Theme.secondaryText)
-                            .padding(.top, 6)
-                    }
-                    .font(.caption.weight(.semibold))
-                    .tint(Theme.accent)
-                    .padding(.top, 4)
-                }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .card(fill: Theme.tint)
         }
     }
 
@@ -355,8 +326,7 @@ struct ChoiceSections: View {
                 }
             }
             Text(difficulty.explanation)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .subtext(.footnote)
         }
     }
 }

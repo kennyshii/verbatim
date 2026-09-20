@@ -16,8 +16,7 @@ struct LoginView: View {
 
             BrandHeader(size: 64)
             Text("Practice arguing. Get honest feedback.")
-                .font(.subheadline)
-                .foregroundStyle(Theme.secondaryText)
+                .subtext(.subheadline)
 
             Picker("", selection: $tab) {
                 ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -36,7 +35,7 @@ struct LoginView: View {
             if let errorMessage {
                 Text(errorMessage)
                     .foregroundStyle(Theme.danger)
-                    .font(.footnote)
+                    .font(.brand(.footnote))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 

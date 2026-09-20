@@ -12,7 +12,7 @@ struct OptionCard: View {
             HStack(alignment: .top, spacing: 12) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.title3)
+                        .font(.brand(.title3, weight: .semibold))
                         .foregroundStyle(selected ? Color.white : Theme.accent)
                         .frame(width: 36, height: 36)
                         .background(selected ? Theme.accent : Theme.tint)
@@ -20,19 +20,18 @@ struct OptionCard: View {
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(.body.weight(.semibold))
+                        .font(.brand(.body, weight: .semibold))
                         .foregroundStyle(Color.primary)
                         .multilineTextAlignment(.leading)
                     if let subtitle {
                         Text(subtitle)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .subtext(.footnote)
                             .multilineTextAlignment(.leading)
                     }
                 }
                 Spacer(minLength: 0)
                 Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
+                    .font(.brand(.title3, weight: .semibold))
                     .foregroundStyle(selected ? Theme.accent : Theme.border)
             }
             .padding(14)
@@ -55,8 +54,8 @@ struct Chip: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 6) {
-                if let icon { Image(systemName: icon).font(.footnote) }
-                Text(label).font(.subheadline.weight(.medium))
+                if let icon { Image(systemName: icon).font(.brand(.footnote)) }
+                Text(label).font(.brand(.subheadline, weight: .medium))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -73,9 +72,9 @@ struct SectionLabel: View {
     let text: String
     var body: some View {
         Text(text.uppercased())
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .tracking(0.6)
+            .font(.brand(.caption, weight: .bold))
+            .foregroundStyle(Theme.secondaryText)
+            .tracking(1.4)
     }
 }
 
@@ -87,8 +86,8 @@ struct StatTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: icon).foregroundStyle(Theme.accent)
-            Text(value).font(.title.weight(.semibold))
-            Text(label).font(.footnote).foregroundStyle(.secondary)
+            Text(value).font(.brand(.title, weight: .semibold))
+            Text(label).font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
@@ -108,9 +107,9 @@ struct MeterBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 4 : 8) {
             HStack {
-                Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                Text(title).font(.brand(.caption, weight: .semibold)).foregroundStyle(Theme.secondaryText)
                 Spacer()
-                Text("\(metrics.overall)%").font(.caption.weight(.semibold)).foregroundStyle(color(metrics.overall))
+                Text("\(metrics.overall)%").font(.brand(.caption, weight: .semibold)).foregroundStyle(color(metrics.overall))
             }
             ProgressView(value: Double(metrics.overall) / 100)
                 .tint(color(metrics.overall))
@@ -123,12 +122,12 @@ struct MeterBar: View {
     private func row(_ label: String, _ value: Int, _ note: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 8) {
-                Text(label).font(.caption2).foregroundStyle(.secondary).frame(width: 78, alignment: .leading)
+                Text(label).font(.brand(.caption2)).foregroundStyle(Theme.secondaryText).frame(width: 78, alignment: .leading)
                 ProgressView(value: Double(value) / 100).tint(color(value))
-                Text("\(value)").font(.caption2.monospacedDigit()).foregroundStyle(color(value)).frame(width: 26, alignment: .trailing)
+                Text("\(value)").font(.brand(.caption2)).foregroundStyle(color(value)).frame(width: 26, alignment: .trailing)
             }
             if !compact {
-                Text(note).font(.caption2).foregroundStyle(.secondary).padding(.leading, 86)
+                Text(note).font(.brand(.caption2)).foregroundStyle(Theme.secondaryText).padding(.leading, 86)
             }
         }
     }
@@ -162,8 +161,7 @@ struct JoinRoomSheet: View {
                     Button(isJoining ? "Joining…" : "Join round") { join() }
                         .disabled(isJoining || code.trimmingCharacters(in: .whitespaces).count < 4 || name.trimmingCharacters(in: .whitespaces).isEmpty)
                     Text("Ask the host for the six-character code on their screen. Relay server: \(RoomClient.serverURL)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .subtext(.footnote)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -202,7 +200,7 @@ struct ReadAloudButton: View {
             Speaker.shared.speak(text, language: language)
         } label: {
             Image(systemName: "speaker.wave.2")
-                .font(.footnote)
+                .font(.brand(.footnote))
         }
         .buttonStyle(.plain)
         .foregroundStyle(Theme.accent)

@@ -20,11 +20,10 @@ struct FeedbackView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(config.kind == .congress ? config.committee : config.kind.subjectLabel).font(.caption).foregroundStyle(.secondary)
-                    Text(config.topic).font(.headline).foregroundStyle(Theme.accent)
+                    Text(config.kind == .congress ? config.committee : config.kind.subjectLabel).font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
+                    Text(config.topic).font(.brand(.headline, weight: .semibold)).foregroundStyle(Theme.accent)
                     Text("\(config.mode.rawValue) · \(config.difficulty.rawValue) · \(config.language.rawValue)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .subtext(.caption)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
@@ -53,8 +52,7 @@ struct FeedbackView: View {
 
                     if saved {
                         Text("Saved to your progress.")
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .subtext(.footnote)
                     }
                 }
             }
@@ -84,8 +82,7 @@ struct FeedbackView: View {
                 MeterBar(metrics: SpeechMetrics.analyze(turns: transcript.filter { $0.role == .user }.map(\.text)))
             }
             Text("Filler words cost 5 points each. Smoothness looks at run-ons, fragments, and stumbles; tone looks for hedging or an overheated voice. Aim for 90 or higher.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .subtext(.caption)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -144,7 +141,7 @@ struct FeedbackSectionsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(title)
-                            .font(compact ? .subheadline.bold() : .headline)
+                            .font(compact ? .brand(.subheadline, weight: .bold) : .brand(.headline, weight: .semibold))
                             .foregroundStyle(Theme.accent)
                         if !compact {
                             Spacer()
@@ -152,7 +149,7 @@ struct FeedbackSectionsView: View {
                         }
                     }
                     Text(body)
-                        .font(compact ? .subheadline : .body)
+                        .font(compact ? .brand(.subheadline) : .brand(.body))
                         .textSelection(.enabled)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,13 +183,13 @@ struct JudgeDecisionView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Label("Decision", systemImage: "rosette")
-                        .font(.headline)
+                        .font(.brand(.headline, weight: .semibold))
                         .foregroundStyle(Theme.sandText)
                     Spacer()
                     ReadAloudButton(text: "Decision: \(decision.winner). \(decision.reasonForDecision)", language: language)
                 }
                 Text(decision.winner)
-                    .font(.title2.weight(.semibold))
+                    .font(.brand(.title2, weight: .semibold))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -201,7 +198,7 @@ struct JudgeDecisionView: View {
             ForEach(sections, id: \.0) { title, body in
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
-                        Text(title).font(.headline).foregroundStyle(Theme.accent)
+                        Text(title).font(.brand(.headline, weight: .semibold)).foregroundStyle(Theme.accent)
                         Spacer()
                         ReadAloudButton(text: "\(title). \(body)", language: language)
                     }

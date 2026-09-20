@@ -102,11 +102,11 @@ struct OnlineSessionView: View {
 
     private func header(_ room: Room) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Resolution").font(.caption).foregroundStyle(.secondary)
-            Text(room.topic).font(.headline).foregroundStyle(Theme.accent)
+            Text("Resolution").font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
+            Text(room.topic).font(.brand(.headline, weight: .semibold)).foregroundStyle(Theme.accent)
             HStack(spacing: 8) {
                 Label(room.code, systemImage: "number").font(.caption.weight(.semibold).monospaced())
-                Text("· \(room.mode.rawValue) · \(room.difficulty) · \(room.language)").font(.caption).foregroundStyle(.secondary)
+                Text("· \(room.mode.rawValue) · \(room.difficulty) · \(room.language)").font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,12 +118,12 @@ struct OnlineSessionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Room code").font(.caption).foregroundStyle(.secondary)
+                    Text("Room code").font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
                     Text(room.code)
                         .font(.system(size: 40, weight: .bold, design: .monospaced))
                         .foregroundStyle(Theme.accent)
                     Text("Share this code. Others open the app, tap \"Join a round with a code\", and enter it with their name.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                     ShareLink(item: "Join my debate round in Verbatim — code \(room.code). Resolution: \(room.topic)") {
                         Label("Share code", systemImage: "square.and.arrow.up")
                     }
@@ -142,14 +142,14 @@ struct OnlineSessionView: View {
                                 .foregroundStyle(Theme.accent)
                             Text(p.name).fontWeight(p.id == playerId ? .semibold : .regular)
                             Spacer()
-                            Text("\(p.side) · \(p.role)").font(.caption).foregroundStyle(.secondary)
+                            Text("\(p.side) · \(p.role)").font(.brand(.caption)).foregroundStyle(Theme.secondaryText)
                         }
                         .field()
                     }
                     ForEach(room.players.count..<max(room.players.count, room.capacity), id: \.self) { _ in
                         HStack {
-                            Image(systemName: "person.badge.clock").foregroundStyle(.tertiary)
-                            Text("Waiting for a debater to join…").foregroundStyle(.secondary)
+                            Image(systemName: "person.badge.clock").foregroundStyle(Theme.secondaryText.opacity(0.65))
+                            Text("Waiting for a debater to join…").foregroundStyle(Theme.secondaryText)
                         }
                         .field()
                     }
@@ -160,7 +160,7 @@ struct OnlineSessionView: View {
                         Task { await setStatus("live") }
                     } label: {
                         Text(room.isFull ? "Start the round" : "Waiting for everyone…")
-                            .font(.headline)
+                            .font(.brand(.headline, weight: .semibold))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                     }
@@ -168,11 +168,11 @@ struct OnlineSessionView: View {
                     .disabled(!room.isFull)
                 } else {
                     Text("The host starts the round once everyone has joined.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                 }
 
                 if let errorMessage {
-                    Text(errorMessage).font(.footnote).foregroundStyle(Theme.danger)
+                    Text(errorMessage).font(.brand(.footnote)).foregroundStyle(Theme.danger)
                 }
             }
             .padding(20)
@@ -189,17 +189,17 @@ struct OnlineSessionView: View {
                             Text(room.mode == .team
                                  ? "The case speaker opens, the AI opposing team answers, then crossfire: the AI asks your team three questions you answer live, one at a time."
                                  : "The affirmative opens. Each debater speaks from their own phone when the banner says it's their turn.")
-                                .font(.subheadline).foregroundStyle(.secondary).padding(.top, 8)
+                                .font(.brand(.subheadline)).foregroundStyle(Theme.secondaryText).padding(.top, 8)
                         }
                         ForEach(transcript) { message in
                             MessageBubble(message: message, mode: room.mode, language: config?.language ?? .english, showMetrics: showFillerMeter)
                         }
                         if aiInFlight {
                             Text(room.expected?.messageKind == .crossfireQuestion ? "Opposing team is preparing crossfire questions…" : "Opposing team is responding…")
-                                .font(.subheadline).foregroundStyle(.secondary)
+                                .font(.brand(.subheadline)).foregroundStyle(Theme.secondaryText)
                         }
                         if let errorMessage {
-                            Text(errorMessage).font(.footnote).foregroundStyle(Theme.danger)
+                            Text(errorMessage).font(.brand(.footnote)).foregroundStyle(Theme.danger)
                         }
                         Color.clear.frame(height: 1).id("bottom")
                     }
@@ -212,9 +212,9 @@ struct OnlineSessionView: View {
                 if let cf = crossfirePrompt {
                     VStack(alignment: .leading, spacing: 4) {
                         Label("Crossfire question \(cf.index) of \(cf.total)", systemImage: "questionmark.bubble")
-                            .font(.caption.weight(.semibold))
+                            .font(.brand(.caption, weight: .semibold))
                             .foregroundStyle(Theme.accent)
-                        Text(cf.text).font(.subheadline)
+                        Text(cf.text).font(.brand(.subheadline))
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(10)
@@ -257,7 +257,7 @@ struct OnlineSessionView: View {
                 Text("Waiting…")
             }
         }
-        .font(.caption.weight(.semibold))
+        .font(.brand(.caption, weight: .semibold))
         .foregroundStyle(myTurn ? Color.white : Theme.sandText)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
@@ -268,10 +268,10 @@ struct OnlineSessionView: View {
         VStack(spacing: 12) {
             ProgressView(room.mode.isJudged ? "The judge is deciding…" : "The coach is reviewing the round…")
             if isHost {
-                Text("Your phone is running the judge with your API key.").font(.footnote).foregroundStyle(.secondary)
+                Text("Your phone is running the judge with your API key.").font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
             }
             if let errorMessage {
-                Text(errorMessage).font(.footnote).foregroundStyle(Theme.danger)
+                Text(errorMessage).font(.brand(.footnote)).foregroundStyle(Theme.danger)
                 if isHost { Button("Retry") { Task { await runJudging() } }.buttonStyle(.bordered) }
             }
         }
@@ -287,7 +287,7 @@ struct OnlineSessionView: View {
                 } else if let feedback = room.result?.feedback, let config {
                     FeedbackSectionsView(feedback: feedback, kind: .debate, compact: false, language: config.language)
                 } else {
-                    Text("The round ended without a result.").foregroundStyle(.secondary)
+                    Text("The round ended without a result.").foregroundStyle(Theme.secondaryText)
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -301,10 +301,10 @@ struct OnlineSessionView: View {
                 .card()
 
                 if saved {
-                    Text("Saved to your progress.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Saved to your progress.").font(.brand(.footnote)).foregroundStyle(Theme.secondaryText)
                 }
 
-                Text("Transcript").font(.title3).bold().foregroundStyle(Theme.accent)
+                Text("Transcript").font(.brand(.title3, weight: .semibold)).bold().foregroundStyle(Theme.accent)
                 ForEach(transcript) { message in
                     MessageBubble(message: message, mode: room.mode, language: config?.language ?? .english)
                 }
