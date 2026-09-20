@@ -1,16 +1,18 @@
-# Debate Practice (iOS prototype)
+# Verbatim (iOS prototype)
 
-A Congressional App Challenge prototype that helps students practice debate and Model Congress with
-AI feedback, track their progress, and build confidence speaking. Native iOS app — SwiftUI + SQLite +
-the Anthropic Messages API. No package dependencies.
+**Verbatim** — a Congressional App Challenge prototype that helps students practice debate and Model
+Congress with AI feedback, track their progress, and build confidence speaking. Native iOS app —
+SwiftUI + SQLite + the Anthropic Messages API. No package dependencies.
+
+The app is organised into four tabs: **Practice**, **Congress**, **Progress**, and **Settings**.
 
 ## Run it
 
 1. Open `DebatePractice.xcodeproj` in Xcode 16 or newer.
 2. Pick an iPhone simulator (e.g. iPhone 17) and press ▶.
 3. Sign up with any username/password.
-4. On the Home screen tap the gear icon and paste an Anthropic API key. It's stored in the iOS
-   Keychain (never in this repo). Get a key at https://console.anthropic.com/.
+4. Open the **Settings** tab and paste an Anthropic API key. It's stored in the iOS Keychain (never in
+   this repo). Get a key at https://console.anthropic.com/.
 
 ## What's built
 
@@ -106,6 +108,7 @@ with the source to confirm it against.
 
 | File | Role |
 | --- | --- |
+| `DebatePractice/Theme.swift` | Brand palette, card/button styles, logo header |
 | `DebatePractice/Models.swift` | Data types, NSDA topic catalog, committee catalog, judge presets |
 | `DebatePractice/Data/Database.swift` | Thin SQLite3 wrapper + schema |
 | `DebatePractice/Data/AuthStore.swift` | Signup / login / PBKDF2 hashing |
@@ -130,3 +133,13 @@ Speech recognition inside the app (use the keyboard microphone), email verificat
 deployment of the relay. This is a local prototype:
 calling the Anthropic API directly from the app is fine here, but a shipped version should put a small
 server in between so the key never lives on a phone.
+
+## Branding
+
+The logo and palette come from `verbatimlogo.png`: navy `#1D2540`, cream `#F6F1E9`, coral `#EE7B5B`.
+The app runs in a dark, brand-coloured theme throughout; `DebatePractice/Theme.swift` is the single
+place to change it. The icon and in-app logo live in `Assets.xcassets` as `AppIcon` and `Logo`.
+
+The Xcode target and folder are still named `DebatePractice` internally, and the bundle id is still
+`com.debatepractice.app` so existing accounts and the stored API key survive the rename. The built app,
+its display name, and everything a user sees say **Verbatim**.

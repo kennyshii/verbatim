@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DebateSetupView: View {
     var initialTopic: String? = nil
+    var initialMode: SessionMode? = nil
 
     @EnvironmentObject private var app: AppState
     @AppStorage("support.lowPressure") private var lowPressure = false
@@ -15,6 +16,7 @@ struct DebateSetupView: View {
     @State private var difficulty: Difficulty = .medium
     @State private var mode: SessionMode = .debate
     @State private var showSettings = false
+    @State private var appliedMode = false
     @FocusState private var customFocused: Bool
 
     @State private var online = false
@@ -77,11 +79,12 @@ struct DebateSetupView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(PrimaryButton())
                 .disabled(!canStart)
                 .padding(.top, 4)
             }
             .padding(20)
+            .padding(.bottom, 50)
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)
@@ -95,6 +98,10 @@ struct DebateSetupView: View {
 
     private func applyInitialTopic() {
         if displayName.isEmpty { displayName = app.currentUser?.username ?? "" }
+        if let initialMode, mode != initialMode, !appliedMode {
+            mode = initialMode
+            appliedMode = true
+        }
         guard let initialTopic, topicChoice != initialTopic, customTopic != initialTopic else { return }
         if let cat = topicCategories.first(where: { $0.topics.contains { $0.text == initialTopic } }) {
             category = cat
@@ -138,8 +145,7 @@ struct DebateSetupView: View {
                     TextField("e.g. Resolved: Cities should ban cars downtown.", text: $customTopic, axis: .vertical)
                         .lineLimit(1...3)
                         .focused($customFocused)
-                        .padding(12)
-                        .card()
+                        .field()
                     Text("Phrase it as a claim you can argue for, not a question.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -182,8 +188,7 @@ struct DebateSetupView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 TextField("Your display name", text: $displayName)
-                    .padding(12)
-                    .card()
+                    .field()
             } else {
                 Text("Pass this phone around. Each debater types their speech when the header says it's their turn.")
                     .font(.footnote)
@@ -244,8 +249,7 @@ struct DebateSetupView: View {
             if judgePreset == .custom {
                 TextField("Write the judge's paradigm and instructions…", text: $customJudge, axis: .vertical)
                     .lineLimit(4...10)
-                    .padding(12)
-                    .card()
+                    .field()
             } else {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("\(judgePreset.rawValue) judge instructions")
@@ -316,7 +320,7 @@ struct DebateSetupView: View {
             return
         }
         config.participants = buildParticipants()
-        app.path.append(Route.session(config))
+        app.push(.session(config))
     }
 
     private func createRoom(_ config: PracticeConfig) {
@@ -325,7 +329,7 @@ struct DebateSetupView: View {
         Task {
             do {
                 let (room, playerId) = try await RoomClient().create(config: config, hostName: displayName.trimmingCharacters(in: .whitespaces))
-                app.path.append(Route.onlineSession(room.code, playerId))
+                app.push(.onlineSession(room.code, playerId))
             } catch {
                 createError = error.localizedDescription
             }

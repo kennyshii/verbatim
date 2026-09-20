@@ -124,7 +124,7 @@ struct OnlineSessionView: View {
                         .foregroundStyle(Theme.accent)
                     Text("Share this code. Others open the app, tap \"Join a round with a code\", and enter it with their name.")
                         .font(.footnote).foregroundStyle(.secondary)
-                    ShareLink(item: "Join my debate round in Debate Practice — code \(room.code). Resolution: \(room.topic)") {
+                    ShareLink(item: "Join my debate round in Verbatim — code \(room.code). Resolution: \(room.topic)") {
                         Label("Share code", systemImage: "square.and.arrow.up")
                     }
                     .buttonStyle(.bordered)
@@ -144,16 +144,14 @@ struct OnlineSessionView: View {
                             Spacer()
                             Text("\(p.side) · \(p.role)").font(.caption).foregroundStyle(.secondary)
                         }
-                        .padding(10)
-                        .card()
+                        .field()
                     }
                     ForEach(room.players.count..<max(room.players.count, room.capacity), id: \.self) { _ in
                         HStack {
                             Image(systemName: "person.badge.clock").foregroundStyle(.tertiary)
                             Text("Waiting for a debater to join…").foregroundStyle(.secondary)
                         }
-                        .padding(10)
-                        .card()
+                        .field()
                     }
                 }
 
@@ -225,7 +223,7 @@ struct OnlineSessionView: View {
                 HStack(alignment: .bottom, spacing: 8) {
                     TextField(crossfirePrompt != nil ? "Answer live…" : myTurn ? "Your speech…" : "Waiting for your turn…", text: $input, axis: .vertical)
                         .lineLimit(1...6)
-                        .textFieldStyle(.roundedBorder)
+                        .field()
                         .disabled(!myTurn)
                     Button("Send") { Task { await sendSpeech() } }
                         .buttonStyle(.borderedProminent)

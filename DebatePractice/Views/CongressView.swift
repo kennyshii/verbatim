@@ -13,40 +13,75 @@ struct CongressView: View {
     }
 
     var body: some View {
-        List {
-            Section {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Pick your committee. Each one lists its jurisdiction, the agencies it oversees, links to the data sources members actually cite, and legislation to debate.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-            }
-            Section("Committees") {
+                    .foregroundStyle(Theme.secondaryText)
+                    .padding(.bottom, 4)
+
+                SectionLabel(text: "Committees")
+
                 ForEach(filtered) { committee in
                     NavigationLink(value: Route.committee(committee)) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "building.columns")
-                                .foregroundStyle(Theme.accent)
-                                .frame(width: 24)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(committee.name)
-                                Text(committee.chamber)
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(Theme.accent)
-                                Text(committee.jurisdiction)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                        }
+                        CommitteeRow(committee: committee)
                     }
+                    .buttonStyle(.plain)
+                }
+
+                if filtered.isEmpty {
+                    Text("No committee matches that search.")
+                        .font(.subheadline)
+                        .foregroundStyle(Theme.secondaryText)
+                        .padding(14)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .card()
                 }
             }
+            .padding(20)
+            .padding(.bottom, 60)
         }
-        .searchable(text: $search, prompt: "Search committees")
-        .scrollContentBackground(.hidden)
         .background(Theme.background)
+        .searchable(text: $search, prompt: "Search committees")
         .navigationTitle("Model Congress")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+struct CommitteeRow: View {
+    let committee: Committee
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "building.columns")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .frame(width: 42, height: 42)
+                .background(Theme.accent.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            VStack(alignment: .leading, spacing: 3) {
+                Text(committee.name)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.cream)
+                    .multilineTextAlignment(.leading)
+                Text(committee.chamber)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                Text(committee.jurisdiction)
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryText)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+            }
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Theme.secondaryText)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+        .contentShape(Rectangle())
     }
 }
 
@@ -88,14 +123,12 @@ struct CommitteeDetailView: View {
                     start()
                 } label: {
                     Text("Start Congress Round")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(resolvedBill.isEmpty)
             }
             .padding(20)
+            .padding(.bottom, 50)
         }
         .background(Theme.background)
         .scrollDismissesKeyboard(.interactively)
@@ -219,8 +252,7 @@ struct CommitteeDetailView: View {
                     Text("Bill title used in the round").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                     TextField("A Bill to…", text: $uploadedTitle, axis: .vertical)
                         .lineLimit(1...3)
-                        .padding(10)
-                        .card()
+                        .field()
                     DisclosureGroup("Preview the text that was read") {
                         Text(uploadedText.prefix(1500) + (uploadedText.count > 1500 ? "…" : ""))
                             .font(.caption)
@@ -326,7 +358,7 @@ struct CommitteeDetailView: View {
             config.billText = uploadedText
             config.billFilename = uploadedName
         }
-        app.path.append(Route.session(config))
+        app.push(.session(config))
     }
 }
 
@@ -352,8 +384,7 @@ struct StatLookupSheet: View {
 
                     TextField("e.g. How many satellites are in orbit right now?", text: $question, axis: .vertical)
                         .lineLimit(1...3)
-                        .padding(12)
-                        .card()
+                        .field()
 
                     Button {
                         lookUp()

@@ -184,7 +184,7 @@ struct JoinRoomSheet: View {
             do {
                 let (room, playerId) = try await RoomClient().join(code: code.trimmingCharacters(in: .whitespaces), name: name.trimmingCharacters(in: .whitespaces))
                 dismiss()
-                app.path.append(Route.onlineSession(room.code, playerId))
+                app.push(.onlineSession(room.code, playerId))
             } catch {
                 self.error = error.localizedDescription
             }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct DebatePracticeApp: App {
+struct VerbatimApp: App {
     @StateObject private var app = AppState()
 
     var body: some Scene {

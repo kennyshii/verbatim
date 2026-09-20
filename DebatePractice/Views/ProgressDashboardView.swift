@@ -19,67 +19,99 @@ struct ProgressDashboardView: View {
     }
 
     var body: some View {
-        List {
-            Section {
-                HStack(spacing: 10) {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
                     StatTile(value: "\(streak.current)", label: "Current streak", icon: "flame.fill")
                     StatTile(value: "\(streak.longest)", label: "Longest streak", icon: "trophy.fill")
                 }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                HStack(spacing: 10) {
+                HStack(spacing: 12) {
                     StatTile(value: "\(sessions.count)", label: "Sessions", icon: "checkmark.circle.fill")
-                    StatTile(value: averageAccuracy.map { "\($0)%" } ?? "—", label: "Avg. presentational accuracy", icon: "waveform")
+                    StatTile(value: averageAccuracy.map { "\($0)%" } ?? "—", label: "Avg. accuracy", icon: "waveform")
                 }
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
                 Text("Streak counts consecutive days with at least one completed session. Presentational accuracy blends filler words (−5 each), smoothness, and tone.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .listRowBackground(Color.clear)
-            }
+                    .foregroundStyle(Theme.secondaryText)
 
-            Section("Recurring feedback") {
-                if sessions.count < 2 {
-                    Text("Complete at least two sessions to see patterns in your feedback.")
-                        .foregroundStyle(.secondary)
-                } else if tags.isEmpty {
-                    Text("No recurring themes yet.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(tags) { tag in
-                        LabeledContent(tag.name, value: "flagged in \(tag.count) sessions")
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Recurring feedback")
+                    if sessions.count < 2 {
+                        emptyCard("Complete at least two sessions to see patterns in your feedback.")
+                    } else if tags.isEmpty {
+                        emptyCard("No recurring themes yet.")
+                    } else {
+                        ForEach(tags) { tag in
+                            HStack {
+                                Text(tag.name)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Theme.cream)
+                                Spacer()
+                                Text("flagged in \(tag.count) sessions")
+                                    .font(.caption)
+                                    .foregroundStyle(Theme.secondaryText)
+                            }
+                            .padding(14)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .card()
+                        }
                     }
                 }
-            }
 
-            Section("Past sessions") {
-                if sessions.isEmpty {
-                    Text("No sessions yet.").foregroundStyle(.secondary)
-                } else {
-                    ForEach(sessions) { session in
-                        NavigationLink(value: Route.sessionDetail(session)) {
-                            HStack(spacing: 12) {
-                                Image(systemName: session.kind.icon)
-                                    .foregroundStyle(Theme.accent)
-                                    .frame(width: 24)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(session.topic).font(.body).lineLimit(2)
-                                    Text("\(session.createdDisplay) · \(session.mode) · \(session.difficulty) · \(session.language) · \(SpeechMetrics.analyze(turns: session.ownTurns).percent)%")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionLabel(text: "Past sessions")
+                    if sessions.isEmpty {
+                        emptyCard("No sessions yet.")
+                    } else {
+                        ForEach(sessions) { session in
+                            NavigationLink(value: Route.sessionDetail(session)) {
+                                HStack(spacing: 14) {
+                                    Image(systemName: session.kind.icon)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(Theme.accent)
+                                        .frame(width: 38, height: 38)
+                                        .background(Theme.accent.opacity(0.14))
+                                        .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(session.topic)
+                                            .font(.subheadline.weight(.semibold))
+                                            .foregroundStyle(Theme.cream)
+                                            .multilineTextAlignment(.leading)
+                                            .lineLimit(2)
+                                        Text("\(session.createdDisplay) · \(session.mode) · \(SpeechMetrics.analyze(turns: session.ownTurns).overall)%")
+                                            .font(.caption)
+                                            .foregroundStyle(Theme.secondaryText)
+                                    }
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Theme.secondaryText)
                                 }
+                                .padding(14)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .card()
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
             }
+            .padding(20)
+            .padding(.bottom, 60)
         }
-        .scrollContentBackground(.hidden)
         .background(Theme.background)
         .navigationTitle("Progress")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .onAppear(perform: load)
+    }
+
+    private func emptyCard(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline)
+            .foregroundStyle(Theme.secondaryText)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .card()
     }
 
     private func load() {

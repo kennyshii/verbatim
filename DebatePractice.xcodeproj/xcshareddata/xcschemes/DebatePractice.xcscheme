@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DEBA7E00000000000000A006"
-               BuildableName = "DebatePractice.app"
+               BuildableName = "Verbatim.app"
                BlueprintName = "DebatePractice"
                ReferencedContainer = "container:DebatePractice.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DEBA7E00000000000000A006"
-            BuildableName = "DebatePractice.app"
+            BuildableName = "Verbatim.app"
             BlueprintName = "DebatePractice"
             ReferencedContainer = "container:DebatePractice.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DEBA7E00000000000000A006"
-            BuildableName = "DebatePractice.app"
+            BuildableName = "Verbatim.app"
             BlueprintName = "DebatePractice"
             ReferencedContainer = "container:DebatePractice.xcodeproj">
          </BuildableReference>

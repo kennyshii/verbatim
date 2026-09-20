@@ -5,6 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
 
     var message: String? = nil
+    var embedded: Bool = false
 
     @AppStorage("support.lowPressure") private var lowPressure = false
     @AppStorage("support.readAloud") private var readAloud = false
@@ -16,8 +17,13 @@ struct SettingsView: View {
     @State private var key: String = Keychain.loadAPIKey() ?? ""
 
     var body: some View {
-        NavigationStack {
-            Form {
+        Group {
+            if embedded { form } else { NavigationStack { form } }
+        }
+    }
+
+    private var form: some View {
+        Form {
                 if let message {
                     Section {
                         Text(message).foregroundStyle(Theme.danger)
@@ -34,6 +40,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Language")
                 }
+                .listRowBackground(Theme.surface)
 
                 Section {
                     Toggle(isOn: $lowPressure) {
@@ -69,6 +76,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Tip: on a real iPhone, the keyboard's microphone dictates straight into the composer, so you can practice out loud and still get the filler-word score.")
                 }
+                .listRowBackground(Theme.surface)
 
                 Section {
                     TextField(RoomClient.defaultServer, text: $serverURL)
@@ -81,6 +89,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Online rounds — relay server")
                 }
+                .listRowBackground(Theme.surface)
 
                 Section("Anthropic API key") {
                     SecureField("sk-ant-…", text: $key)
@@ -101,16 +110,19 @@ struct SettingsView: View {
                         }
                     }
                 }
+                .listRowBackground(Theme.surface)
 
                 Section("Model") {
                     Text(ClaudeClient.model).font(.footnote.monospaced())
                 }
+                .listRowBackground(Theme.surface)
             }
-            .scrollContentBackground(.hidden)
-            .background(Theme.background)
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
+        .scrollContentBackground(.hidden)
+        .background(Theme.background)
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if !embedded {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
                 }

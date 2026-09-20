@@ -369,7 +369,7 @@ struct PracticeSessionView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 TextField(placeholder, text: $input, axis: .vertical)
                     .lineLimit(1...5)
-                    .textFieldStyle(.roundedBorder)
+                    .field()
                 Button("Send") { send() }
                     .buttonStyle(.borderedProminent)
                     .disabled(!canSend)
@@ -534,7 +534,7 @@ struct PracticeSessionView: View {
 
     private func finish() {
         Speaker.shared.stop()
-        app.path.append(Route.feedback(config, messages))
+        app.push(.feedback(config, messages))
     }
 }
 
@@ -554,8 +554,7 @@ struct InquirySheet: View {
                         .foregroundStyle(.secondary)
                     TextField("e.g. What is the current federal deficit? Or: is a motion to amend in order right now?", text: $text, axis: .vertical)
                         .lineLimit(2...6)
-                        .padding(12)
-                        .card()
+                        .field()
                     Button {
                         onSubmit(text)
                     } label: {

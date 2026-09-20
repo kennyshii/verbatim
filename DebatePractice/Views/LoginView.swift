@@ -14,12 +14,10 @@ struct LoginView: View {
         VStack(spacing: 16) {
             Spacer()
 
-            Text("Debate Practice")
-                .font(.largeTitle)
-                .bold()
-                .foregroundStyle(Theme.accent)
+            BrandHeader(size: 64)
             Text("Practice arguing. Get honest feedback.")
-                .foregroundStyle(.secondary)
+                .font(.subheadline)
+                .foregroundStyle(Theme.secondaryText)
 
             Picker("", selection: $tab) {
                 ForEach(Tab.allCases, id: \.self) { Text($0.rawValue).tag($0) }
@@ -28,12 +26,12 @@ struct LoginView: View {
             .padding(.top, 8)
 
             TextField("Username", text: $username)
-                .textFieldStyle(.roundedBorder)
+                .field()
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
 
             SecureField("Password", text: $password)
-                .textFieldStyle(.roundedBorder)
+                .field()
 
             if let errorMessage {
                 Text(errorMessage)
@@ -43,8 +41,7 @@ struct LoginView: View {
             }
 
             Button(tab.rawValue) { submit() }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
+                .buttonStyle(PrimaryButton())
 
             Spacer()
             Spacer()

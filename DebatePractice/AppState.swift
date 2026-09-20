@@ -3,19 +3,28 @@ import SwiftUI
 
 enum Route: Hashable {
     case debateSetup(String?)
+    case debateSetupMode(SessionMode)
     case onlineSession(String, String)
-    case congress
     case committee(Committee)
     case session(PracticeConfig)
     case feedback(PracticeConfig, [ChatMessage])
-    case dashboard
     case sessionDetail(SessionRecord)
+}
+
+enum AppTab: Hashable {
+    case practice
+    case congress
+    case progress
+    case settings
 }
 
 @MainActor
 final class AppState: ObservableObject {
     @Published var currentUser: User?
-    @Published var path = NavigationPath()
+    @Published var tab: AppTab = .practice
+    @Published var practicePath = NavigationPath()
+    @Published var congressPath = NavigationPath()
+    @Published var progressPath = NavigationPath()
     @Published private(set) var hasAPIKey: Bool = (Keychain.loadAPIKey() ?? "").isEmpty == false
 
     @AppStorage("support.lowPressure") var lowPressure = false
@@ -28,6 +37,15 @@ final class AppState: ObservableObject {
     lazy var sessions = SessionStore(db: db)
     let claude = ClaudeClient()
 
+    func push(_ route: Route) {
+        switch tab {
+        case .practice: practicePath.append(route)
+        case .congress: congressPath.append(route)
+        case .progress: progressPath.append(route)
+        case .settings: tab = .practice; practicePath.append(route)
+        }
+    }
+
     func setAPIKey(_ key: String) {
         Keychain.saveAPIKey(key)
         hasAPIKey = !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -35,10 +53,13 @@ final class AppState: ObservableObject {
 
     func logout() {
         currentUser = nil
-        path = NavigationPath()
+        goHome()
+        tab = .practice
     }
 
     func goHome() {
-        path = NavigationPath()
+        practicePath = NavigationPath()
+        congressPath = NavigationPath()
+        progressPath = NavigationPath()
     }
 }
