@@ -5,13 +5,15 @@ import Security
 enum AuthError: LocalizedError {
     case emptyFields
     case usernameTaken
-    case invalidCredentials
+    case noSuchUser
+    case wrongPassword
 
     var errorDescription: String? {
         switch self {
         case .emptyFields: return "Enter a username and password."
         case .usernameTaken: return "That username is already taken."
-        case .invalidCredentials: return "Incorrect username or password."
+        case .noSuchUser: return "No account with that username on this device. Tap Sign up to create one."
+        case .wrongPassword: return "That password doesn't match this account."
         }
     }
 }
@@ -23,7 +25,7 @@ struct AuthStore {
         let name = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty, !password.isEmpty else { throw AuthError.emptyFields }
 
-        let existing = try db.query("SELECT id FROM users WHERE username = ?", [name])
+        let existing = try db.query("SELECT id FROM users WHERE username = ? COLLATE NOCASE", [name])
         guard existing.isEmpty else { throw AuthError.usernameTaken }
 
         let now = ISO8601DateFormatter().string(from: Date())
@@ -43,16 +45,17 @@ struct AuthStore {
         guard !name.isEmpty, !password.isEmpty else { throw AuthError.emptyFields }
 
         let rows = try db.query(
-            "SELECT id, username, password_hash, created_at FROM users WHERE username = ?",
+            "SELECT id, username, password_hash, created_at FROM users WHERE username = ? COLLATE NOCASE",
             [name]
         )
         guard let row = rows.first,
               let id = row["id"] as? Int64,
-              let hash = row["password_hash"] as? String,
-              PasswordHasher.verify(password, against: hash)
-        else { throw AuthError.invalidCredentials }
+              let hash = row["password_hash"] as? String
+        else { throw AuthError.noSuchUser }
 
-        return User(id: id, username: name, createdAt: row["created_at"] as? String ?? "")
+        guard PasswordHasher.verify(password, against: hash) else { throw AuthError.wrongPassword }
+
+        return User(id: id, username: row["username"] as? String ?? name, createdAt: row["created_at"] as? String ?? "")
     }
 }
 
