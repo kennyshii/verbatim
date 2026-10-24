@@ -3,7 +3,7 @@ import * as api from "../api.js";
 import { analyzeTurns } from "../metrics.js";
 import { speak, stop as stopSpeaking } from "../speech.js";
 import * as store from "../store.js";
-import { feedbackSections, h, judgeDecision, meterBar, pageHeader, replace, sectionLabel, topicBox } from "../ui.js";
+import { feedbackSections, h, icon, judgeDecision, meterBar, pageHeader, replace, sectionLabel, topicBox } from "../ui.js";
 
 export function deliveryCard(config, transcript) {
   const meters = isMultiplayer(config.mode) && config.participants?.length
@@ -41,16 +41,17 @@ export default function feedbackView({ app }) {
     if (pending.error) {
       return replace(content, h("div", { class: "card error-card" },
         h("p", { class: "error" }, pending.error),
-        h("button", { type: "button", class: "button secondary compact", onClick: generate }, "Retry")));
+        h("button", { type: "button", class: "button secondary compact", onClick: () => generate(pending.saved) }, "Retry")));
     }
     replace(content,
       resultView(pending.result, config),
       deliveryCard(config, transcript),
-      pending.saved ? h("p", { class: "subtext small" }, "Saved to your progress.") : null);
+      h("button", { type: "button", class: "button secondary", onClick: () => { stopSpeaking(); generate(true); } }, icon("rebut"), judged ? "Judge Again" : "Regenerate Feedback"),
+      h("p", { class: "ai-note" }, `${pending.saved ? "Saved to your progress. " : ""}${judged ? "The decision" : "Feedback"} is written by AI and can be wrong. Quoted words come from your speeches.`));
   }
 
-  async function generate() {
-    if (pending.saved || pending.loading) return render();
+  async function generate(again = false) {
+    if ((pending.saved && !again) || pending.loading) return render();
     pending.loading = true;
     pending.error = "";
     render();
@@ -68,7 +69,8 @@ export default function feedbackView({ app }) {
           speak(`${t[0]}. ${feedback.strongestArgument}. ${t[1]}. ${feedback.weakestArgument}. ${t[2]}. ${feedback.missedRebuttal}. ${t[3]}. ${feedback.suggestion}`, config.language);
         }
       }
-      store.saveSession(app.user.id, config, transcript, pending.result);
+      if (pending.recordId) store.updateSessionFeedback(pending.recordId, pending.result);
+      else pending.recordId = store.saveSession(app.user.id, config, transcript, pending.result).id;
       pending.saved = true;
     } catch (e) {
       pending.error = e.message;

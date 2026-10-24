@@ -163,12 +163,23 @@ setInterval(() => {
   for (const [ip, times] of aiCalls) if (!times.some((t) => now - t < AI_WINDOW_MS)) aiCalls.delete(ip);
 }, AI_WINDOW_MS).unref();
 
+const ACCESS_CODE = process.env.ACCESS_CODE || "";
+
+function hasAccess(req) {
+  if (!ACCESS_CODE) return true;
+  const given = Buffer.from(String(req.headers["x-access-code"] || ""));
+  const want = Buffer.from(ACCESS_CODE);
+  return given.length === want.length && crypto.timingSafeEqual(given, want);
+}
+
 async function handleAPI(req, res, action) {
   if (req.method === "GET" && action === "status") {
-    return send(res, 200, { ai: claude.hasKey(), model: claude.MODEL });
+    return send(res, 200, { ai: claude.hasKey(), model: claude.MODEL, locked: Boolean(ACCESS_CODE) });
   }
   if (req.method !== "POST") return send(res, 404, { error: "Not found" });
   if (!allowAI(req)) return send(res, 429, { error: "Too many AI requests from this connection. Wait a few minutes and try again." });
+  if (!hasAccess(req)) return send(res, 401, { error: "That access code isn't right." });
+  if (action === "unlock") return send(res, 200, { ok: true });
 
   const b = await readBody(req);
   const config = claude.cleanConfig(b.config);

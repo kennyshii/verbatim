@@ -43,6 +43,6 @@ export function messageBubble(message, mode, { language = "English", showMetrics
       body,
       metricsLine,
       message.statCheck ? h("div", { class: "stat-check" },
-        h("div", { class: "bubble-tag" }, icon("shield"), "Stat check"),
+        h("div", { class: "bubble-tag" }, icon("warn"), "Stat check"),
         richText(message.statCheck)) : null));
 }

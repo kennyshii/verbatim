@@ -93,8 +93,8 @@ export default function sessionView({ app }) {
   };
   const activeSegment = () => segment() || (s.floorSpeaking ? FLOOR_SPEECH : null);
   const clockText = () => {
-    const v = Math.max(0, s.remaining);
-    return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
+    const v = Math.abs(s.remaining);
+    return `${s.remaining < 0 ? "+" : ""}${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
   };
 
   function currentParticipant() {
@@ -152,6 +152,24 @@ export default function sessionView({ app }) {
   const box = composer({ language: config.language, placeholder: placeholder(), onSend: send, onInput: () => updateComposer() });
   const crossfireBox = h("div");
   const inquiryNote = h("div");
+  const clockBox = h("div");
+
+  function renderClock() {
+    const seg = activeSegment();
+    if (!congress || !seg || !userTurnInCongress()) return replace(clockBox);
+    const over = s.remaining < 0;
+    const fill = Math.max(0, Math.min(100, (s.remaining / seg.seconds) * 100));
+    replace(clockBox, h("section", { class: "card speech-clock", "aria-label": "Speech clock" },
+      h("div", { class: "speech-clock-head" },
+        h("div", { class: "stack-sm", style: { gap: "0" } },
+          h("strong", null, `Your ${seg.title.toLowerCase()}`),
+          h("span", { class: "subtext small" }, `${seg.stance === "Pro" ? "For" : "Against"} the bill · about ${seg.wordBudget} words`)),
+        h("button", { type: "button", class: "icon-button mic", "aria-label": s.timerRunning ? "Pause the clock" : "Start the clock", onClick: () => { s.timerRunning = !s.timerRunning; renderClock(); } },
+          icon(s.timerRunning ? "pause" : "play"))),
+      h("div", { class: `speech-clock-time${over ? " over" : ""}`, role: "timer" }, clockText()),
+      h("div", { class: `bar${over ? " low" : ""}` }, h("div", { class: "bar-fill", style: { width: `${fill}%` } })),
+      h("span", { class: "subtext small" }, over ? "Over time. Wrap up your last point." : s.timerRunning ? "Clock running. It keeps counting past zero." : "Paused. The clock is a guide; nothing cuts you off.")));
+  }
 
   function banner() {
     const p = currentParticipant();
@@ -164,10 +182,8 @@ export default function sessionView({ app }) {
       const seg = activeSegment();
       if (!seg) return h("div", { class: "banner" }, icon("flag"), "Main speeches complete — the floor is open");
       const mine = userTurnInCongress();
-      const over = s.remaining <= 0 && s.timerRunning;
       return h("div", { class: "banner" }, icon(mine ? "mic" : "user"),
-        mine ? `You — ${seg.title} (${seg.stance})` : `AI member — ${seg.title} (${seg.stance}, ${seg.clock})`,
-        mine ? h("span", { class: `clock${over ? " over" : ""}` }, over ? "over time" : clockText()) : null);
+        mine ? `You — ${seg.title} (${seg.stance})` : `AI member — ${seg.title} (${seg.stance}, ${seg.clock})`);
     }
     return h("div", { class: "subtext small" }, `${mode} · ${config.difficulty} · ${config.language}`);
   }
@@ -176,7 +192,7 @@ export default function sessionView({ app }) {
     replace(headerRegion, topicBox(congress ? config.committee : "Resolution", config.topic, banner()));
     replace(actions,
       congress ? h("button", { type: "button", class: "button secondary compact", disabled: s.thinking || s.inquiryPending, onClick: openInquiry }, icon("hand"), "Point of inquiry") : null,
-      h("button", { type: "button", class: "button secondary compact", disabled: s.thinking, onClick: endTapped }, judged || team || congress ? "End Round" : "End Debate"));
+      h("button", { type: "button", class: "button primary compact", disabled: s.thinking, onClick: endTapped }, judged || team || congress ? "End Round" : "End Debate"));
   }
 
   function grounding() {
@@ -228,7 +244,8 @@ export default function sessionView({ app }) {
       box.stop();
       return replace(bottomRegion);
     }
-    if (!bottomRegion.contains(box.el)) replace(bottomRegion, crossfireBox, box.el, inquiryNote);
+    if (!bottomRegion.contains(box.el)) replace(bottomRegion, clockBox, crossfireBox, box.el, inquiryNote);
+    renderClock();
     updateComposer();
   }
 
@@ -256,7 +273,7 @@ export default function sessionView({ app }) {
   const ticker = setInterval(() => {
     if (!s.timerRunning || !userTurnInCongress()) return;
     s.remaining -= 1;
-    renderHeader();
+    renderClock();
   }, 1000);
 
   function send() {

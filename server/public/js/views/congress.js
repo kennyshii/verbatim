@@ -1,4 +1,5 @@
 import { COMMITTEES, CONGRESS_SCRIPT, SIDES } from "../data.js";
+import { reveal } from "../motion.js";
 import * as api from "../api.js";
 import { ACCEPT, extract, suggestedTitle } from "../document.js";
 import * as store from "../store.js";
@@ -14,8 +15,14 @@ export function congressListView() {
     const q = search.value.trim().toLowerCase();
     const filtered = COMMITTEES.filter((c) => !q || c.name.toLowerCase().includes(q) || c.jurisdiction.toLowerCase().includes(q));
     replace(list, filtered.length
-      ? filtered.map((c) => navRow({ iconName: "congress", title: c.name, badge: c.chamber, detail: c.jurisdiction, href: `#/congress/${c.slug}` }))
+      ? filtered.map((c, i) => {
+          const row = navRow({ iconName: "congress", title: c.name, badge: c.chamber, detail: c.jurisdiction, href: `#/congress/${c.slug}` });
+          row.classList.add("reveal");
+          row.style.setProperty("--i", String(i % 2));
+          return row;
+        })
       : h("div", { class: "card empty" }, "No committee matches that search."));
+    reveal(list);
   }
   search.addEventListener("input", render);
   render();
@@ -23,7 +30,7 @@ export function congressListView() {
   const el = h("div", { class: "page" },
     pageHeader({ title: "Model Congress" }),
     h("div", { class: "stack-lg" },
-      subtext("Pick your committee. Each one lists its jurisdiction, the agencies it oversees, links to the data sources members actually cite, and legislation to debate."),
+      h("p", { class: "lede", style: { fontSize: "21px", color: "var(--ink2)", maxWidth: "640px" } }, "Pick your committee. Each one lists its jurisdiction, the agencies it oversees, the data sources members actually cite, and legislation to debate."),
       search,
       sectionLabel("Committees"),
       h("div", { class: "committee-grid" }, list)));

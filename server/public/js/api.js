@@ -1,9 +1,19 @@
+const CODE_KEY = "verbatim.accessCode";
+
+export function accessCode() {
+  try { return localStorage.getItem(CODE_KEY) || ""; } catch { return ""; }
+}
+
+function setAccessCode(code) {
+  try { localStorage.setItem(CODE_KEY, code); } catch {}
+}
+
 async function request(path, body) {
   let res;
   try {
     res = await fetch(path, body === undefined
       ? { cache: "no-store" }
-      : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+      : { method: "POST", headers: { "content-type": "application/json", "x-access-code": accessCode() }, body: JSON.stringify(body) });
   } catch {
     throw new Error("Couldn't reach the Verbatim server. Check that it's running and try again.");
   }
@@ -13,6 +23,11 @@ async function request(path, body) {
 }
 
 export const status = () => request("/api/status");
+
+export async function unlock(code) {
+  setAccessCode(code);
+  await request("/api/unlock", {});
+}
 
 const wire = (messages) => messages.map(({ role, text, speaker, kind }) => ({ role, text, speaker, kind }));
 

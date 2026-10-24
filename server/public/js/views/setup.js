@@ -130,12 +130,13 @@ export default function setupView({ query, app }) {
 
   function renderFooter() {
     const reason = blocker();
-    const label = state.creating ? "Creating room…" : multiplayer ? (state.online ? "Create room & get code" : `Start ${mode}`) : "Start Debate";
+    const label = state.creating ? "Creating Room…" : multiplayer ? (state.online ? "Create Room and Get Code" : `Start ${mode}`) : "Start Round";
     replace(footer,
       state.createError ? h("p", { class: "error" }, state.createError) : null,
       aiWarning(app),
       h("button", { type: "button", class: "button primary", disabled: Boolean(reason) || state.creating, onClick: start }, label),
-      reason && !state.creating ? h("p", { class: "hint" }, icon("info"), reason) : null);
+      reason && !state.creating ? h("p", { class: "hint" }, icon("info"), reason) : null,
+      h("p", { class: "ai-note" }, isJudged(mode) ? "The judge is AI. Its decision may contain mistakes." : "Your opponent and coach are AI. Replies may contain mistakes."));
   }
 
   function render() {

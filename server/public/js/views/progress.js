@@ -9,6 +9,17 @@ import { averageAccuracy, ownTurns } from "./home.js";
 
 const empty = (text) => h("div", { class: "card empty" }, text);
 
+function bestLines(sessions) {
+  const lines = [];
+  for (const session of sessions) {
+    if (session.feedback?.type !== "coach") continue;
+    const match = String(session.feedback.feedback.strongestArgument).match(/[“"]([^”"\n]{12,220}?)[”"]/);
+    if (match) lines.push({ quote: match[1], source: `${session.topic.replace(/^Resolved:\s*/, "")} · ${formatDate(session.createdAt).split(",")[0]}`, id: session.id });
+    if (lines.length === 6) break;
+  }
+  return lines;
+}
+
 export function progressView({ app }) {
   const streak = store.streak(app.user.id);
   const sessions = store.sessionsFor(app.user.id);
@@ -20,28 +31,36 @@ export function progressView({ app }) {
     h("div", { class: "stack-xl" },
       h("div", { class: "stack" },
         h("div", { class: "tiles" },
-          statTile(String(streak.current), "Current streak", "flame"),
-          statTile(String(streak.longest), "Longest streak", "trophy"),
-          statTile(String(sessions.length), "Sessions", "checkCircle"),
-          statTile(accuracy === null ? "—" : `${accuracy}%`, "Avg. accuracy", "wave2")),
+          statTile(String(streak.current), "Current streak", "flame", 0),
+          statTile(String(streak.longest), "Longest streak", "trophy", 1),
+          statTile(String(sessions.length), "Rounds", "checkCircle", 2),
+          statTile(accuracy === null ? "—" : `${accuracy}%`, "Avg. delivery", "wave2", 3)),
         subtext("Streak counts consecutive days with at least one completed session. Presentational accuracy blends filler words (−5 each), smoothness, and tone.")),
-      h("section", { class: "stack" },
-        sectionLabel("Recurring feedback"),
+      (() => {
+        const lines = bestLines(sessions);
+        return lines.length ? h("section", { class: "stack reveal" },
+          sectionLabel("Lines worth keeping"),
+          h("div", { class: "lines-row" }, lines.map((l) => h("a", { class: "card line-card", href: `#/progress/${l.id}` },
+            h("q", { class: "verbatim" }, h("mark", null, l.quote)),
+            h("span", { class: "subtext small" }, l.source))))) : null;
+      })(),
+      h("section", { class: "stack reveal" },
+        sectionLabel("Keep working on"),
         sessions.length < 2
           ? empty("Complete at least two sessions to see patterns in your feedback.")
           : tags.length
-            ? tags.map((t) => h("div", { class: "card tag-row" }, h("strong", null, t.name), h("span", { class: "subtext small" }, `flagged in ${t.count} sessions`)))
+            ? h("div", { class: "group" }, tags.map((t) => h("div", { class: "card tag-row" }, h("strong", null, t.name), h("span", { class: "subtext small" }, `flagged in ${t.count} of ${sessions.length} rounds`))))
             : empty("No recurring themes yet.")),
-      h("section", { class: "stack" },
-        sectionLabel("Past sessions"),
+      h("section", { class: "stack reveal" },
+        sectionLabel("Rounds"),
         sessions.length
-          ? sessions.map((s) => navRow({
+          ? h("div", { class: "group" }, sessions.map((s) => navRow({
               iconName: s.kind === "congress" ? "congress" : "debate",
               title: s.topic,
               detail: `${formatDate(s.createdAt)} · ${s.mode} · ${overall(analyzeTurns(ownTurns(s)))}%`,
               href: `#/progress/${s.id}`,
-            }))
-          : empty("No sessions yet."))));
+            })))
+          : empty("No rounds yet. Finish one and it shows up here."))));
   return { el, title: "Progress" };
 }
 

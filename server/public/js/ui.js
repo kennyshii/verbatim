@@ -1,6 +1,7 @@
 import { sectionTitles } from "./data.js";
 import * as M from "./metrics.js";
 import { speak } from "./speech.js";
+import { morphDialog, pressedElement } from "./motion.js";
 
 export function h(tag, attrs, ...children) {
   const el = document.createElement(tag);
@@ -9,7 +10,12 @@ export function h(tag, attrs, ...children) {
       if (value === null || value === undefined || value === false) continue;
       if (key.startsWith("on") && typeof value === "function") el.addEventListener(key.slice(2).toLowerCase(), value);
       else if (key === "class") el.className = value;
-      else if (key === "style" && typeof value === "object") Object.assign(el.style, value);
+      else if (key === "style" && typeof value === "object") {
+        for (const [prop, v] of Object.entries(value)) {
+          if (prop.startsWith("--")) el.style.setProperty(prop, String(v));
+          else el.style[prop] = v;
+        }
+      }
       else if (key === "value") el.value = value;
       else if (value === true) el.setAttribute(key, "");
       else el.setAttribute(key, value);
@@ -24,6 +30,14 @@ function append(el, children) {
     if (child === null || child === undefined || child === false) continue;
     el.append(child instanceof Node ? child : document.createTextNode(String(child)));
   }
+}
+
+export function maskWords(...parts) {
+  let n = 0;
+  const wrap = (node) => h("span", { class: "wm" }, h("span", { class: "wi", style: { "--wi": n++ } }, node));
+  return parts.flatMap((part) => typeof part === "string"
+    ? part.split(/(\s+)/).filter(Boolean).map((w) => /^\s+$/.test(w) ? w : wrap(w))
+    : [wrap(part)]);
 }
 
 export function replace(el, ...children) {
@@ -82,6 +96,10 @@ const ICONS = {
   amend: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6M9 15h6"/>',
   circle: '<circle cx="12" cy="12" r="9"/>',
   checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+  play: '<path d="M8 5v14l11-7z" fill="currentColor"/>',
+  pause: '<path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="currentColor"/>',
+  alertCircle: '<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/>',
+  warn: '<path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
 };
 
 export function icon(name, cls = "icon") {
@@ -92,10 +110,34 @@ export function icon(name, cls = "icon") {
   return span;
 }
 
-export function richText(text, cls = "rich") {
+export function logoMark(size = 22) {
+  const span = document.createElement("span");
+  span.className = "logo-mark";
+  span.setAttribute("aria-hidden", "true");
+  span.innerHTML = `<svg width="${Math.round(size * 1.9)}" height="${size}" viewBox="0 0 76 40"><path fill="currentColor" d="M33 2C25 8 16 14 11 18a11 11 0 1 0 16 13c2-9 4-19 6-29Z"/><path class="drop-accent" d="M73 2C65 8 56 14 51 18a11 11 0 1 0 16 13c2-9 4-19 6-29Z"/></svg>`;
+  return span;
+}
+
+const QUOTE = /[“"]([^”"\n]{3,}?)[”"]/g;
+
+function inline(el, text, quotes) {
+  const parts = String(text).split(/\*\*(.+?)\*\*/g);
+  parts.forEach((part, i) => {
+    if (i % 2) return el.append(h("strong", null, part));
+    if (!quotes) return el.append(document.createTextNode(part));
+    let last = 0;
+    for (const m of part.matchAll(QUOTE)) {
+      el.append(document.createTextNode(part.slice(last, m.index)));
+      el.append(h("q", { class: "verbatim" }, h("mark", null, m[1])));
+      last = m.index + m[0].length;
+    }
+    el.append(document.createTextNode(part.slice(last)));
+  });
+}
+
+export function richText(text, cls = "rich", { quotes = false } = {}) {
   const el = h("div", { class: cls });
-  const parts = String(text).replace(/^#{1,6}\s+/gm, "").split(/\*\*(.+?)\*\*/g);
-  parts.forEach((part, i) => el.append(i % 2 ? h("strong", null, part) : document.createTextNode(part)));
+  inline(el, String(text).replace(/^#{1,6}\s+/gm, ""), quotes);
   return el;
 }
 
@@ -117,7 +159,7 @@ export function optionCard({ title, subtitle, iconName, selected, onClick }) {
 }
 
 export function navRow({ iconName, title, badge, detail, href, onClick, clamp = true }) {
-  return h(href ? "a" : "button", { class: "nav-row card", href, type: href ? null : "button", onClick },
+  return h(href ? "a" : "button", { class: "nav-row", style: { padding: "10px 16px" }, href, type: href ? null : "button", onClick },
     h("span", { class: "row-icon" }, icon(iconName)),
     h("span", { class: "row-body" },
       h("span", { class: "row-title" }, title),
@@ -130,7 +172,7 @@ export function readAloudButton(text, language) {
   return h("button", { type: "button", class: "icon-button", title: "Read aloud", "aria-label": "Read aloud", onClick: () => speak(text, language) }, icon("speaker"));
 }
 
-const level = (value) => (value >= 90 ? "good" : value >= 75 ? "ok" : "low");
+const level = (value) => (value >= 75 ? "ok" : "low");
 
 function bar(value) {
   return h("div", { class: `bar ${level(value)}`, role: "meter", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(value) },
@@ -150,13 +192,20 @@ export function meterBar(metrics, { title = "Presentational accuracy", compact =
     row("Tone", metrics.tone, M.toneSummary(metrics)));
 }
 
+const FEEDBACK_MARKS = [["good", "checkCircle"], ["bad", "alertCircle"], [null, null], [null, null]];
+
 export function feedbackSections(feedback, { kind = "debate", compact = false, language = "English" } = {}) {
   const titles = sectionTitles(kind);
   const bodies = [feedback.strongestArgument, feedback.weakestArgument, feedback.missedRebuttal, feedback.suggestion];
   return h("div", { class: `feedback-list${compact ? " compact" : ""}` },
-    titles.map((title, i) => h("section", { class: compact ? "feedback-item" : "feedback-item card" },
-      h("div", { class: "feedback-head" }, h("h3", null, title), compact ? null : readAloudButton(`${title}. ${bodies[i]}`, language)),
-      richText(bodies[i]))));
+    titles.map((title, i) => {
+      const [tone, mark] = FEEDBACK_MARKS[i];
+      return h("section", { class: compact ? "feedback-item" : "feedback-item card" },
+        h("div", { class: "feedback-head" },
+          h("h3", { class: tone }, mark && !compact ? icon(mark) : null, title),
+          compact ? null : readAloudButton(`${title}. ${bodies[i]}`, language)),
+        richText(bodies[i], "rich", { quotes: true }));
+    }));
 }
 
 export function judgeDecision(decision, { affirmative, negative, language = "English" }) {
@@ -173,15 +222,24 @@ export function judgeDecision(decision, { affirmative, negative, language = "Eng
       h("p", { class: "decision-winner" }, decision.winner)),
     sections.map(([title, body]) => h("section", { class: "feedback-item card" },
       h("div", { class: "feedback-head" }, h("h3", null, title), readAloudButton(`${title}. ${body}`, language)),
-      richText(body))));
+      richText(body, "rich", { quotes: true }))));
 }
 
-export function statTile(value, label, iconName) {
-  return h("div", { class: "stat-tile card" }, icon(iconName, "icon accent"), h("div", { class: "stat-value" }, value), h("div", { class: "subtext" }, label));
+export function statTile(value, label, iconName, i = 0) {
+  return h("div", { class: "stat-tile reveal", style: { "--i": String(i) } }, icon(iconName, "icon accent"), h("div", { class: "stat-value" }, value), h("div", { class: "subtext" }, label));
 }
 
 export function modal(title, build) {
-  const close = () => { dialog.close(); dialog.remove(); };
+  const origin = pressedElement();
+  let collapse = null;
+  let closing = false;
+  const close = () => {
+    if (closing) return;
+    closing = true;
+    const finish = () => { dialog.close(); dialog.remove(); };
+    if (collapse) collapse().then(finish, finish);
+    else finish();
+  };
   const dialog = h("dialog", { class: "modal", "aria-label": title });
   dialog.append(
     h("div", { class: "modal-head" }, h("h2", null, title),
@@ -189,8 +247,11 @@ export function modal(title, build) {
     h("div", { class: "modal-body" }, build(close)));
   dialog.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
   dialog.addEventListener("click", (e) => { if (e.target === dialog) close(); });
+  if (origin) dialog.classList.add("morphing");
   document.body.append(dialog);
   dialog.showModal();
+  collapse = morphDialog(dialog, origin);
+  if (!collapse) dialog.classList.remove("morphing");
   return close;
 }
 
@@ -210,7 +271,7 @@ export function autoGrow(textarea, max = 220) {
 export function pageHeader({ title, back, actions = [] }) {
   return h("div", { class: "page-header" },
     back ? h("a", { class: "back-link", href: back.href, onClick: back.onClick }, icon("back"), back.label || "Back") : h("span"),
-    h("h1", null, title),
+    typeof title === "string" ? h("h1", { class: "words reveal" }, maskWords(title)) : h("h1", null, title),
     h("div", { class: "page-actions" }, actions));
 }
 

@@ -114,6 +114,10 @@ export function saveSession(userId, config, transcript, feedback) {
   return record;
 }
 
+export function updateSessionFeedback(id, feedback) {
+  write(KEYS.sessions, read(KEYS.sessions, []).map((s) => (s.id === id ? { ...s, feedback } : s)));
+}
+
 export const sessionsFor = (userId) => read(KEYS.sessions, []).filter((s) => s.userId === userId).sort((a, b) => b.id - a.id);
 export const sessionById = (userId, id) => sessionsFor(userId).find((s) => s.id === id);
 
