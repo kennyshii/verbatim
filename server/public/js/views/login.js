@@ -64,6 +64,33 @@ export default function loginView({ app }) {
       h("a", { class: "more-link", href: "#/join" }, "Join a round", icon("chevron"))),
     h("div", { class: "scroll-cue", "aria-hidden": "true" }, "Scroll", icon("chevron", "icon rot")));
 
+  const bubbles = [
+    ["Opponent · Negative", "Colonization money could end famine on Earth today. A moral imperative can't ask the poor to pay for a hypothetical future.", ""],
+    ["You · Affirmative", "Space research already funds the satellites that predict famine. Expansion is how we stop treating the future as disposable.", "mine"],
+    ["Coach", "Strong turn. You answered the biggest impact first, then extended your framework.", "coach"],
+  ].map(([who, text, cls]) => h("div", { class: `mock-bubble ${cls}` }, h("span", { class: "mock-speaker" }, who), h("p", null, text)));
+  const meters = [["Filler words", 96], ["Smoothness", 88], ["Tone", 92]].map(([label, value]) => {
+    const fill = h("span", { class: "mock-fill" });
+    return { value, fill, el: h("div", { class: "mock-meter" }, h("span", { class: "kv-line" }, h("span", null, label), h("span", { class: "strong" }, String(value))), h("span", { class: "mock-track" }, fill)) };
+  });
+  const mockClock = h("span", { class: "mock-clock" }, "4:00");
+  const mockScore = h("span", null, "0");
+  const device = h("div", { class: "device", "aria-hidden": "true" },
+    h("div", { class: "device-bar" },
+      h("span", { class: "device-dots" }, h("i"), h("i"), h("i")),
+      h("span", { class: "device-title" }, "Lincoln-Douglas · Your rebuttal"),
+      mockClock),
+    h("div", { class: "device-body" },
+      h("div", { class: "device-main" },
+        h("p", { class: "device-topic" }, "Resolved: Outer space colonization is a moral imperative."),
+        bubbles),
+      h("div", { class: "device-side" },
+        h("span", { class: "subtext small" }, "Live delivery"),
+        h("div", { class: "device-score" }, mockScore, h("span", null, "%")),
+        meters.map((m) => m.el),
+        h("p", { class: "subtext small" }, "Two fillers caught. Scored as you type or speak."))));
+  const showcase = h("section", { class: "showcase" }, device);
+
   const story = wordReveal("Verbatim takes the other side, keeps the clock, judges the round, and hands back your strongest line exactly as you said it.");
   const storySection = h("section", { class: "story" }, h("div", { class: "story-stage" }, story));
 
@@ -94,6 +121,7 @@ export default function loginView({ app }) {
 
   const el = h("div", { class: "welcome" },
     hero,
+    showcase,
     storySection,
     chapter("Hear every um.", "Filler words, run-ons, and hedging are scored as you type or speak, five points for every filler. Watch them fall away as you practice.", fillerDemo),
     h("div", { class: "dark-band" },
@@ -103,6 +131,16 @@ export default function loginView({ app }) {
 
   const stops = [
     trackProgress(heroTitle, { onProgress: (p) => heroTitle.style.setProperty("--p", Math.min(1, 0.15 + p * 1.6).toFixed(3)) }),
+    trackProgress(showcase, { onProgress: (p) => {
+      const rise = Math.min(1, Math.max(0, (p - 0.04) / 0.36));
+      const fill = Math.min(1, Math.max(0, (p - 0.3) / 0.25));
+      device.style.setProperty("--q", rise.toFixed(4));
+      bubbles.forEach((b, i) => b.classList.toggle("on", p > 0.22 + i * 0.09));
+      meters.forEach((m) => { m.fill.style.width = `${m.value * fill}%`; });
+      mockScore.textContent = String(Math.round(92 * fill));
+      const left = Math.round(240 - fill * 78);
+      mockClock.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+    } }),
     trackProgress(storySection, { sticky: true, onProgress: (p) => story.update(p) }),
     trackProgress(fillerDemo, { onProgress: (p) => {
       const q = Math.min(1, Math.max(0, (p - 0.2) * 2));

@@ -63,7 +63,22 @@ export default function setupView({ query, app }) {
   }
 
   const body = h("div", { class: "stack-xl" });
+  const summary = h("div", { class: "summary-card" });
   const footer = h("div", { class: "stack" });
+
+  function renderSummary() {
+    const topic = resolvedTopic();
+    const category = state.useCustom ? "Custom resolution" : TOPIC_CATEGORIES[state.category].name;
+    const row = (label, value) => h("div", { class: "kv" }, h("span", { class: "subtext" }, label), h("span", { class: "strong" }, value));
+    replace(summary,
+      h("span", { class: "eyebrow" }, `${mode} · ${category}`),
+      h("p", { class: `summary-topic${topic ? "" : " empty"}` }, topic || "Write your resolution to see it here."),
+      h("div", { class: "summary-rows" },
+        row("Your side", multiplayer ? state.userSide : "Affirmative"),
+        multiplayer ? row("Playing", state.online ? "Online with a code" : "Same device") : row("Opponent", mode === "Coach" ? "None, just the coach" : "AI, Negative"),
+        isJudged(mode) ? row("Judge", state.judgePreset) : null,
+        row("Difficulty", state.difficulty)));
+  }
 
   function topicSection() {
     const category = TOPIC_CATEGORIES[state.category];
@@ -129,6 +144,7 @@ export default function setupView({ query, app }) {
   }
 
   function renderFooter() {
+    renderSummary();
     const reason = blocker();
     const label = state.creating ? "Creating Room…" : multiplayer ? (state.online ? "Create Room and Get Code" : `Start ${mode}`) : "Start Round";
     replace(footer,
@@ -204,8 +220,10 @@ export default function setupView({ query, app }) {
 
   render();
 
-  const el = h("div", { class: "page narrow" },
+  const el = h("div", { class: "page" },
     pageHeader({ title: `Set up ${mode}`, back: { href: "#/debate", label: "Debate" } }),
-    body, footer);
+    h("div", { class: "split" },
+      body,
+      h("aside", { class: "split-side" }, summary, footer)));
   return { el, title: `Set up ${mode}`, onStatus: renderFooter };
 }

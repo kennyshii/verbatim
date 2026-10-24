@@ -130,6 +130,19 @@ export function committeeView({ params, app }) {
 
   const body = h("div", { class: "stack-xl" });
   const startArea = h("div", { class: "stack" });
+  const summary = h("div", { class: "summary-card" });
+
+  function renderSummary() {
+    const bill = resolvedBill();
+    const row = (label, value) => h("div", { class: "kv" }, h("span", { class: "subtext" }, label), h("span", { class: "strong" }, value));
+    replace(summary,
+      h("span", { class: "eyebrow" }, `${committee.name} · ${committee.chamber}`),
+      h("p", { class: `summary-topic${bill ? "" : " empty"}` }, bill || "Give your uploaded bill a title to see it here."),
+      h("div", { class: "summary-rows" },
+        row("Your side", state.side === "Affirmative" ? "Affirm the bill" : "Negate the bill"),
+        row("Speeches", `${CONGRESS_SCRIPT.length} timed`),
+        row("Difficulty", state.difficulty)));
+  }
 
   function legislationSection() {
     const uploaded = Boolean(state.uploadedText);
@@ -182,6 +195,7 @@ export function committeeView({ params, app }) {
   }
 
   function renderStart() {
+    renderSummary();
     replace(startArea,
       aiWarning(app),
       h("button", { type: "button", class: "button primary", disabled: !resolvedBill(), onClick: start }, "Start Congress Round"));
@@ -219,8 +233,10 @@ export function committeeView({ params, app }) {
   }
 
   render();
-  const el = h("div", { class: "page narrow" },
+  const el = h("div", { class: "page" },
     pageHeader({ title: committee.name, back: { href: "#/congress", label: "Committees" } }),
-    body, startArea);
+    h("div", { class: "split" },
+      body,
+      h("aside", { class: "split-side" }, summary, startArea)));
   return { el, title: committee.name, onStatus: renderStart };
 }
