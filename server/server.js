@@ -1,5 +1,12 @@
-const http = require("http");
-const crypto = require("crypto");
+import http from "node:http";
+import crypto from "node:crypto";
+import { readFile, stat } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import * as claude from "./claude.js";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+try { process.loadEnvFile(path.join(HERE, ".env")); } catch {}
 
 const PORT = process.env.PORT || 8787;
 const ROOM_TTL_MS = 6 * 60 * 60 * 1000;
@@ -102,12 +109,102 @@ function requireHost(room, playerId) {
   if (room.hostId !== playerId) throw Object.assign(new Error("Only the host can do that"), { status: 403 });
 }
 
+const PUBLIC = path.join(HERE, "public");
+const TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".ttf": "font/ttf",
+  ".txt": "text/plain; charset=utf-8",
+  ".webmanifest": "application/manifest+json",
+};
+
+async function serveStatic(res, pathname) {
+  let file = path.normalize(path.join(PUBLIC, decodeURIComponent(pathname)));
+  if (!file.startsWith(PUBLIC)) return send(res, 403, { error: "Forbidden" });
+  const info = await stat(file).catch(() => null);
+  if (!info || info.isDirectory()) file = path.extname(pathname) ? null : path.join(PUBLIC, "index.html");
+  if (!file) return send(res, 404, { error: "Not found" });
+  const data = await readFile(file).catch(() => null);
+  if (!data) return send(res, 404, { error: "Not found" });
+  res.writeHead(200, {
+    "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
+    "Content-Length": data.length,
+    "Cache-Control": "no-cache",
+    "X-Content-Type-Options": "nosniff",
+  });
+  res.end(data);
+}
+
+const AI_LIMIT = Number(process.env.AI_RATE_LIMIT || 120);
+const AI_WINDOW_MS = 10 * 60 * 1000;
+const aiCalls = new Map();
+
+function clientIP(req) {
+  const forwarded = process.env.TRUST_PROXY ? String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() : "";
+  return forwarded || req.socket.remoteAddress || "unknown";
+}
+
+function allowAI(req) {
+  const now = Date.now();
+  const ip = clientIP(req);
+  const recent = (aiCalls.get(ip) || []).filter((t) => now - t < AI_WINDOW_MS);
+  if (recent.length >= AI_LIMIT) return false;
+  recent.push(now);
+  aiCalls.set(ip, recent);
+  return true;
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, times] of aiCalls) if (!times.some((t) => now - t < AI_WINDOW_MS)) aiCalls.delete(ip);
+}, AI_WINDOW_MS).unref();
+
+async function handleAPI(req, res, action) {
+  if (req.method === "GET" && action === "status") {
+    return send(res, 200, { ai: claude.hasKey(), model: claude.MODEL });
+  }
+  if (req.method !== "POST") return send(res, 404, { error: "Not found" });
+  if (!allowAI(req)) return send(res, 429, { error: "Too many AI requests from this connection. Wait a few minutes and try again." });
+
+  const b = await readBody(req);
+  const config = claude.cleanConfig(b.config);
+  const history = claude.cleanHistory(b.history || b.transcript);
+  const text = (value, max) => String(value || "").slice(0, max).trim();
+
+  switch (action) {
+    case "turn":
+      return send(res, 200, { text: await claude.liveTurn(config, history) });
+    case "crossfire":
+      return send(res, 200, { questions: await claude.crossfireQuestions(config, history) });
+    case "statcheck":
+      return send(res, 200, { text: await claude.checkStatistics(text(b.text, 8000), text(b.topic, 600), config.language) });
+    case "feedback":
+      return send(res, 200, { feedback: await claude.postSessionFeedback(config, history) });
+    case "judge":
+      return send(res, 200, { decision: await claude.judgeRound(config, history) });
+    case "inquiry":
+      return send(res, 200, { text: await claude.pointOfInquiry(config, text(b.question, 1000), history) });
+    case "statlookup":
+      return send(res, 200, { text: await claude.lookUpStatistic(text(b.question, 500), b.committee, config.language) });
+    default:
+      return send(res, 404, { error: "Not found" });
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const parts = url.pathname.split("/").filter(Boolean);
 
-    if (req.method === "GET" && parts.length === 0) return send(res, 200, { ok: true, rooms: rooms.size });
+    if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true, rooms: rooms.size });
+
+    if (parts[0] === "api") return await handleAPI(req, res, parts[1]);
+
+    if (req.method === "GET" && parts[0] !== "rooms") return await serveStatic(res, url.pathname);
 
     if (req.method === "POST" && parts[0] === "rooms" && parts.length === 1) {
       const b = await readBody(req);
@@ -207,4 +304,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`Debate relay listening on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`Verbatim is running at http://localhost:${PORT}`);
+  if (!claude.hasKey()) console.log("No ANTHROPIC_API_KEY set. Rounds will fail until you add one to server/.env.");
+});

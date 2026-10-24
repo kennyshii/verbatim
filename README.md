@@ -14,6 +14,20 @@ The app is organised into four tabs: **Debate**, **Congress**, **Progress**, and
 4. Open the **Settings** tab and paste an Anthropic API key. It's stored in the iOS Keychain (never in
    this repo). Get a key at https://console.anthropic.com/.
 
+## Web version
+
+Everything below also runs in the browser. The site, the Claude calls, and the online-round relay are one
+zero-dependency Node server in `server/`:
+
+```
+cd server
+cp .env.example .env      # paste an Anthropic API key after ANTHROPIC_API_KEY=
+node server.js            # open http://localhost:8787
+```
+
+On the web the API key lives only on the server, accounts and progress are saved in the browser, and the
+composer has a microphone button for dictation where the browser supports it. See `server/README.md`.
+
 ## What's built
 
 ### Debate
@@ -38,7 +52,7 @@ The app is organised into four tabs: **Debate**, **Congress**, **Progress**, and
 Language is set once in **Settings → Language** and applies to every round and all feedback.
 
 ### Playing online
-Multiplayer rounds sync through the tiny relay in `server/` (Node 18+, zero dependencies):
+Multiplayer rounds sync through the tiny relay in `server/` (Node 20.12+, zero dependencies), which also serves the web version:
 
 ```
 cd server && node server.js
@@ -120,7 +134,9 @@ with the source to confirm it against.
 | `DebatePractice/Services/SpeechMetrics.swift` | Filler, smoothness, and tone scoring |
 | `DebatePractice/Services/RoomClient.swift` | Online room codes, turns, and syncing |
 | `DebatePractice/Services/DocumentText.swift` | Reads bill text out of PDF / DOCX / RTF / TXT |
-| `server/server.js` | The relay server for online rounds |
+| `server/server.js` | Web server: the site, the `/api` Claude endpoints, and the relay for online rounds |
+| `server/claude.js` | Server-side prompts and Claude calls for the web version |
+| `server/public/` | The web version: `js/views/` holds one file per screen |
 | `DebatePractice/Services/Speaker.swift` | Text-to-speech |
 | `DebatePractice/Services/TagExtractor.swift` | Recurring-feedback tagging |
 | `DebatePractice/Views/` | One SwiftUI file per screen |

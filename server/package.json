@@ -1,13 +1,14 @@
 {
-  "name": "debate-relay",
+  "name": "verbatim",
   "version": "1.0.0",
   "private": true,
-  "description": "Tiny relay for online 1v1, 2v2, and team rounds. No dependencies.",
+  "type": "module",
+  "description": "Verbatim on the web: the site, the Claude API proxy, and the relay for online rounds. No dependencies.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.12"
   }
 }

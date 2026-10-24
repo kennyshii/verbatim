@@ -11,3 +11,6 @@ build/
 *.dSYM.zip
 *.dSYM
 
+
+# Server secrets
+.env

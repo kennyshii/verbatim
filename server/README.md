@@ -1,14 +1,32 @@
-# Debate relay server
+# Verbatim server
 
-Keeps online rounds (1v1, 2v2, Team vs AI) in sync between phones. Zero dependencies.
+One Node process, zero dependencies (Node 20.12+). It serves three things:
+
+- **The website** in `public/`: all of Verbatim in the browser (Debate, Congress, Progress, Settings).
+- **The AI endpoints** under `/api/*`. Prompts are built here and sent to Claude with the server's key,
+  so the key never reaches a browser and the endpoints can't be used as a general Claude proxy.
+- **The relay** under `/rooms/*` that keeps online 1v1, 2v2, and Team vs AI rounds in sync. The iOS app
+  uses the same relay, so phones and browsers can play in the same room.
+
+## Run it
 
 ```
-node server.js            # listens on http://localhost:8787
-PORT=3000 node server.js  # any port
+cp .env.example .env      # then paste your key after ANTHROPIC_API_KEY=
+node server.js            # http://localhost:8787
 ```
 
-Rooms live in memory and expire after six hours. Deploy anywhere that runs Node 18+
-(Render, Railway, Fly.io, a Raspberry Pi) and paste the public URL into the app under
-Settings → Online rounds → Relay server.
+Optional settings in `.env`:
 
-For the iOS simulator, `http://localhost:8787` works out of the box.
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8787` | Port to listen on |
+| `CLAUDE_MODEL` | `claude-sonnet-5` | Model used for every AI call |
+| `AI_RATE_LIMIT` | `120` | AI requests allowed per connection every 10 minutes |
+| `TRUST_PROXY` | unset | Set when hosted behind a proxy so rate limits use `X-Forwarded-For` |
+| `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Point at a different API host |
+
+Accounts, sessions, and streaks are stored in each visitor's browser (like the app's on-device
+SQLite), so the server keeps no user data. Rooms live in memory and expire after six hours.
+
+Accounts need a secure context for password hashing: `localhost` works, and any hosted copy must use
+https. The health check moved from `/` to `/health`.
