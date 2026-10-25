@@ -30,7 +30,7 @@ export function congressListView() {
   const el = h("div", { class: "page" },
     pageHeader({ title: "Model Congress" }),
     h("div", { class: "stack-lg" },
-      h("p", { class: "lede", style: { fontSize: "21px", color: "var(--ink2)", maxWidth: "640px" } }, "Pick your committee. Each one lists its jurisdiction, the agencies it oversees, the data sources members actually cite, and legislation to debate."),
+      h("p", { class: "lede", style: { fontSize: "21px", color: "var(--ink2)", maxWidth: "640px" } }, "Pick the committee you would like to practice; options vary by jurisdiction, data sources, and legislation to debate."),
       search,
       sectionLabel("Committees"),
       h("div", { class: "committee-grid" }, list)));

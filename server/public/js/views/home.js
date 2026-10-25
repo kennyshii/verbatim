@@ -1,4 +1,4 @@
-import { DEBATE_MODES, SUGGESTED_RESOLUTIONS, TOPIC_CATEGORIES, modeInfo } from "../data.js";
+import { DEBATE_MODES, FEATURED_RESOLUTION, SUGGESTED_RESOLUTIONS, modeInfo } from "../data.js";
 import { analyzeTurns, overall } from "../metrics.js";
 import { gallery, trackProgress } from "../motion.js";
 import * as store from "../store.js";
@@ -18,14 +18,7 @@ export function aiWarning(app) {
 }
 
 export function currentResolution() {
-  const now = new Date();
-  const month = now.toLocaleString("en-US", { month: "long" });
-  const year = String(now.getFullYear());
-  for (const category of TOPIC_CATEGORIES) {
-    const topic = category.topics.find((t) => t.period.startsWith(year) && t.period.includes(month));
-    if (topic) return { text: topic.text, label: `${category.name} · ${topic.period.replace(`${year} `, "")}` };
-  }
-  return { text: SUGGESTED_RESOLUTIONS[0], label: "Suggested resolution" };
+  return FEATURED_RESOLUTION;
 }
 
 const MODE_LINES = {
@@ -85,9 +78,7 @@ export default function homeView({ app }) {
     h("header", { class: "hero" },
       h("span", { class: "streak-pill reveal" }, icon("flame"), streak.current > 0 ? `${streak.current}-day streak` : "Start a streak today"),
       h("h1", { class: "words reveal", style: { "--i": 1 } }, maskWords(`${greeting()}, ${app.user.username}.`)),
-      h("p", { class: "lede reveal", style: { "--i": 2 } }, sessions.length
-        ? `Round ${sessions.length + 1} is waiting. Pick a resolution and make your case.`
-        : "Your first round is one tap away. Pick a resolution and make your case.")),
+      h("p", { class: "lede reveal", style: { "--i": 2 } }, "Need help organizing your thoughts? We’ll help you visualize it.")),
     h("div", { class: "stack-xl", style: { marginTop: "48px" } },
       featureTile,
       warning,

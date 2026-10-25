@@ -11,6 +11,7 @@ import feedbackView from "./views/feedback.js";
 import { congressListView, committeeView } from "./views/congress.js";
 import { progressView, sessionDetailView } from "./views/progress.js";
 import settingsView from "./views/settings.js";
+import communityView from "./views/community.js";
 import { joinPageView, roomView } from "./views/online.js";
 
 export const app = {
@@ -48,6 +49,7 @@ const ROUTES = [
   [/^\/feedback$/, () => feedbackView],
   [/^\/congress$/, () => congressListView],
   [/^\/congress\/([a-z-]+)$/, () => committeeView],
+  [/^\/community$/, () => communityView],
   [/^\/progress$/, () => progressView],
   [/^\/progress\/(\d+)$/, () => sessionDetailView],
   [/^\/settings$/, () => settingsView],
@@ -58,6 +60,7 @@ const ROUTES = [
 const TABS = [
   ["debate", "Debate", "debate"],
   ["congress", "Congress", "congress"],
+  ["community", "Take 2", "take2"],
   ["progress", "Progress", "chart"],
   ["settings", "Settings", "gear"],
 ];
@@ -76,7 +79,7 @@ const topbar = h("header", { class: "topbar" },
 root.append(topbar, nav, main);
 autoPills(main);
 
-const DEPTH = { login: 0, debate: 1, congress: 1, progress: 1, settings: 1, join: 2, session: 3, room: 3, feedback: 4 };
+const DEPTH = { login: 0, debate: 1, congress: 1, community: 1, progress: 1, settings: 1, join: 2, session: 3, room: 3, feedback: 4 };
 const depthOf = (path) => {
   const parts = path.split("/").filter(Boolean);
   return (DEPTH[parts[0]] ?? 1) + (parts.length > 1 && !["session", "room", "feedback"].includes(parts[0]) ? 1 : 0);

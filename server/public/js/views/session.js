@@ -7,6 +7,7 @@ import { dictation, speak, stop as stopSpeaking } from "../speech.js";
 import * as store from "../store.js";
 import { autoGrow, confirmDialog, h, icon, meterBar, modal, pageHeader, replace, subtext, topicBox } from "../ui.js";
 import { messageBubble } from "./bubble.js";
+import { recordingReport, rerecordDialog } from "./report.js";
 
 const TITLES = { Debate: "Debate", Coach: "Coach session", "1v1": "1v1", "2v2": "2v2", "Team vs AI": "Team vs AI", Congress: "Congress round" };
 
@@ -24,6 +25,7 @@ export function composer({ language, placeholder, onSend, onInput }) {
   const meter = h("div", { class: "composer-meter" });
   const send = h("button", { type: "button", class: "button primary compact", onClick: () => onSend() }, "Send");
   let mic = null;
+  let recorded = false;
 
   const refresh = () => {
     fit();
@@ -32,6 +34,7 @@ export function composer({ language, placeholder, onSend, onInput }) {
   };
 
   const dictate = dictation(textarea, language, (listening) => {
+    if (listening) recorded = true;
     if (listening !== undefined && mic) {
       mic.classList.toggle("listening", listening);
       mic.setAttribute("aria-pressed", listening ? "true" : "false");
@@ -54,7 +57,8 @@ export function composer({ language, placeholder, onSend, onInput }) {
   return {
     el, textarea, send,
     value: () => textarea.value.trim(),
-    clear: () => { dictate?.stop(); textarea.value = ""; refresh(); },
+    recorded: () => recorded,
+    clear: () => { dictate?.stop(); recorded = false; textarea.value = ""; refresh(); },
     stop: () => dictate?.stop(),
   };
 }
@@ -144,6 +148,12 @@ export default function sessionView({ app }) {
       : "The AI member is the bill's sponsor and opens with a two-minute authorship speech. You answer with a four-minute constructive against it, the sponsor gives a two-minute second speech, and you close with two more. Rise to a point of inquiry any time.",
   }[mode];
 
+  const reports = new Map();
+  const reportFor = (m) => {
+    if (!reports.has(m.id)) reports.set(m.id, recordingReport({ onRerecord: rerecord }));
+    return reports.get(m.id);
+  };
+
   const headerRegion = h("div", { class: "session-header" });
   const transcriptRegion = h("div", { class: "transcript", "aria-live": "polite" });
   const bottomRegion = h("div", { class: "composer" });
@@ -215,7 +225,9 @@ export default function sessionView({ app }) {
     }
     replace(transcriptRegion,
       s.messages.length ? null : h("p", { class: "subtext intro" }, intro),
-      s.messages.map((m) => messageBubble(m, mode, { language: config.language, showMetrics: prefs.showFillerMeter })),
+      s.messages.map((m) => [
+        messageBubble(m, mode, { language: config.language, showMetrics: prefs.showFillerMeter }),
+        m.recorded ? reportFor(m) : null]),
       s.thinking ? h("p", { class: "subtext thinking" }, h("span", { class: "spinner" }), "Thinking…") : null,
       s.error ? h("div", { class: "card error-card" },
         h("p", { class: "error" }, s.error),
@@ -279,12 +291,14 @@ export default function sessionView({ app }) {
   function send() {
     const text = box.value();
     if (!text || s.thinking || awaitingAI()) return;
+    const recorded = box.recorded();
     box.clear();
     const p = currentParticipant();
     let message;
     if (congress) message = { id: newId(), role: "user", text, speaker: userName, kind: "speech" };
     else if (p) message = { id: newId(), role: p.isUser ? "user" : "assistant", text, speaker: p.name, kind: step()?.kind || "speech" };
     else message = { id: newId(), role: "user", text, speaker: userName, kind: "speech" };
+    if (recorded) message.recorded = true;
     s.messages.push(message);
     s.floorSpeaking = false;
     runStatCheck(message);
@@ -363,6 +377,11 @@ export default function sessionView({ app }) {
     if (congress) resetClock();
     update();
     if (!s.error) advanceIfAITurn();
+  }
+
+  function rerecord() {
+    box.stop();
+    rerecordDialog({ language: config.language });
   }
 
   function openInquiry() {

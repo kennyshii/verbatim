@@ -105,6 +105,11 @@ export const TOPIC_CATEGORIES = [
   },
 ];
 
+export const FEATURED_RESOLUTION = {
+  text: "The United States ought to require that workers receive a living wage.",
+  label: "Lincoln-Douglas · September/October 2024",
+};
+
 export const SUGGESTED_RESOLUTIONS = [
   "Resolved: Outer space colonization is a moral imperative.",
   "Resolved: The United States federal government should enact a moratorium on hyperscale data center construction.",
