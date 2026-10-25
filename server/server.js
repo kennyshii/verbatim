@@ -174,7 +174,7 @@ function hasAccess(req) {
 
 async function handleAPI(req, res, action) {
   if (req.method === "GET" && action === "status") {
-    return send(res, 200, { ai: claude.hasKey(), model: claude.MODEL, locked: Boolean(ACCESS_CODE) });
+    return send(res, 200, { ai: claude.hasKey(), model: claude.model(), locked: Boolean(ACCESS_CODE) });
   }
   if (req.method !== "POST") return send(res, 404, { error: "Not found" });
   if (!allowAI(req)) return send(res, 429, { error: "Too many AI requests from this connection. Wait a few minutes and try again." });
@@ -317,5 +317,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`Verbatim is running at http://localhost:${PORT}`);
-  if (!claude.hasKey()) console.log("No ANTHROPIC_API_KEY set. Rounds will fail until you add one to server/.env.");
+  if (!claude.hasKey()) console.log("No ANTHROPIC_API_KEY or GEMINI_API_KEY set. Rounds will fail until you add one to server/.env.");
 });

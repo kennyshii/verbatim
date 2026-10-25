@@ -14,7 +14,7 @@ export function averageAccuracy(sessions) {
 
 export function aiWarning(app) {
   return app.ai.ready ? null : h("div", { class: "notice" }, icon("key"),
-    h("span", null, "The server has no Anthropic API key yet. Add ANTHROPIC_API_KEY to server/.env and restart it to start a round."));
+    h("span", null, "The server has no AI key yet. Add ANTHROPIC_API_KEY or GEMINI_API_KEY to server/.env and restart it to start a round."));
 }
 
 export function currentResolution() {

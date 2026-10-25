@@ -25,6 +25,8 @@ Optional settings in `.env`:
 | `ACCESS_CODE` | unset | Visitors must enter this code before the site's AI endpoints respond |
 | `TRUST_PROXY` | unset | Set when hosted behind a proxy so rate limits use `X-Forwarded-For` |
 | `ANTHROPIC_BASE_URL` | `https://api.anthropic.com` | Point at a different API host |
+| `GEMINI_API_KEY` | unset | Use Google Gemini instead when no `ANTHROPIC_API_KEY` is set |
+| `GEMINI_MODEL` | `gemini-3.6-flash` | Gemini model used for every AI call; falls back to `gemini-flash-lite-latest` when Google reports high demand |
 
 Accounts, sessions, and streaks are stored in each visitor's browser (like the app's on-device
 SQLite), so the server keeps no user data. Rooms live in memory and expire after six hours.

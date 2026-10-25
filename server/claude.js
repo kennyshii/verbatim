@@ -4,11 +4,13 @@ import {
 } from "./public/js/data.js";
 import { parseDecision, parseFeedback } from "./public/js/feedback.js";
 
-export const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-5";
-const ENDPOINT = `${(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com").replace(/\/$/, "")}/v1/messages`;
+const useGemini = () => !process.env.ANTHROPIC_API_KEY && Boolean(process.env.GEMINI_API_KEY);
+export const model = () => (useGemini() ? process.env.GEMINI_MODEL || "gemini-3.6-flash" : process.env.CLAUDE_MODEL || "claude-sonnet-5");
+const GEMINI_FALLBACK = "gemini-flash-lite-latest";
+const endpoint = () => `${(process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com").replace(/\/$/, "")}/v1/messages`;
 const API_VERSION = "2023-06-01";
 
-export const hasKey = () => Boolean(process.env.ANTHROPIC_API_KEY);
+export const hasKey = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.GEMINI_API_KEY);
 
 export class ClaudeError extends Error {
   constructor(message, status = 502) {
@@ -160,17 +162,43 @@ function apiMessages(history) {
   return result;
 }
 
+async function sendGemini(system, messages, maxTokens, name = model()) {
+  let res;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(name)}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: messages.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+        generationConfig: { maxOutputTokens: maxTokens * 4 },
+      }),
+      signal: AbortSignal.timeout(90_000),
+    });
+  } catch (e) {
+    throw new ClaudeError(`Network error: ${e.message}`);
+  }
+  const json = await res.json().catch(() => null);
+  if (res.status === 503 && name !== GEMINI_FALLBACK) return sendGemini(system, messages, maxTokens, GEMINI_FALLBACK);
+  if (res.status === 429) throw new ClaudeError("Gemini's free tier limit was reached. Wait a minute and try again.", 429);
+  if (!res.ok) throw new ClaudeError(`API error (${res.status}): ${json?.error?.message || `HTTP ${res.status}`}`);
+  const text = (json?.candidates?.[0]?.content?.parts || []).filter((p) => p.text && !p.thought).map((p) => p.text).join("").trim();
+  if (!text) throw new ClaudeError("The API returned an unexpected response.");
+  return text;
+}
+
 async function send(system, messages, maxTokens) {
-  const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) throw new ClaudeError("The server has no Anthropic API key. Set ANTHROPIC_API_KEY in server/.env and restart it.", 503);
   if (!messages.length) throw new ClaudeError("There's nothing to respond to yet.", 400);
+  if (useGemini()) return sendGemini(system, messages, maxTokens);
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) throw new ClaudeError("The server has no AI key. Set ANTHROPIC_API_KEY or GEMINI_API_KEY in server/.env and restart it.", 503);
 
   let res;
   try {
-    res = await fetch(ENDPOINT, {
+    res = await fetch(endpoint(), {
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": API_VERSION, "content-type": "application/json" },
-      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens, system, messages }),
+      body: JSON.stringify({ model: model(), max_tokens: maxTokens, system, messages }),
       signal: AbortSignal.timeout(90_000),
     });
   } catch (e) {
