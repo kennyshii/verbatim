@@ -29,6 +29,8 @@ export async function unlock(code) {
   await request("/api/unlock", {});
 }
 
+export const voice = async (text) => (await request("/api/voice", { text })).audio;
+
 const wire = (messages) => messages.map(({ role, text, speaker, kind }) => ({ role, text, speaker, kind }));
 
 export const ai = {

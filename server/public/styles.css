@@ -835,3 +835,9 @@ main { overflow-x: clip; }
   .post-text { font-size: 21px; }
   .post-action { font-size: 14px; gap: 6px; }
 }
+
+.listen-card { display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
+.listen-card [hidden] { display: none; }
+.listen-head { display: flex; gap: 14px; align-items: center; }
+.listen-icon { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; background: var(--mine); color: var(--accent-text); font-size: 20px; animation: pulse 1.6s infinite; }
+.listen-card .bar-fill { background: var(--accent); transition: width 0.4s linear; }

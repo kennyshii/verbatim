@@ -321,3 +321,55 @@ The sources this committee relies on are: ${committee.sources.map((s) => s.title
 Their question: "${question}"`;
   return send(statLookupSystemPrompt(language), [{ role: "user", content: prompt }], 700);
 }
+
+function wav(pcm, rate) {
+  const header = Buffer.alloc(44);
+  header.write("RIFF", 0);
+  header.writeUInt32LE(36 + pcm.length, 4);
+  header.write("WAVEfmt ", 8);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(1, 22);
+  header.writeUInt32LE(rate, 24);
+  header.writeUInt32LE(rate * 2, 28);
+  header.writeUInt16LE(2, 32);
+  header.writeUInt16LE(16, 34);
+  header.write("data", 36);
+  header.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([header, pcm]);
+}
+
+export async function voice(text) {
+  if (!process.env.GEMINI_API_KEY) throw new ClaudeError("No voice service is configured.", 501);
+  if (!text) throw new ClaudeError("There's nothing to read.", 400);
+  try {
+    return await voiceFrom(process.env.GEMINI_TTS_MODEL || "gemini-3.8-flash-tts", text);
+  } catch (e) {
+    if (e.status === 429) throw e;
+    return voiceFrom("gemini-3.8-flash-lite-tts", text);
+  }
+}
+
+async function voiceFrom(name, text) {
+  let res;
+  try {
+    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(name)}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: process.env.GEMINI_VOICE || "Puck" } } } },
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+  } catch (e) {
+    throw new ClaudeError(`Network error: ${e.message}`);
+  }
+  const json = await res.json().catch(() => null);
+  if (!res.ok) throw new ClaudeError(`Voice error (${res.status}): ${json?.error?.message || `HTTP ${res.status}`}`, res.status === 429 ? 429 : 502);
+  const part = (json?.candidates?.[0]?.content?.parts || []).find((p) => p.inlineData)?.inlineData;
+  if (!part) throw new ClaudeError("The voice service returned no audio.");
+  const raw = Buffer.from(part.data, "base64");
+  const rate = Number(/rate=(\d+)/.exec(part.mimeType)?.[1] || 24000);
+  return (/wav/.test(part.mimeType) ? raw : wav(raw, rate)).toString("base64");
+}

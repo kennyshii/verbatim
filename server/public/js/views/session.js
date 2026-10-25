@@ -81,8 +81,10 @@ export default function sessionView({ app }) {
 
   const s = {
     messages: [], thinking: false, error: "", ready: false,
-    remaining: 0, timerRunning: false, inquiryPending: false, floorSpeaking: false, finished: false,
+    remaining: 0, timerRunning: false, inquiryPending: false, floorSpeaking: false, finished: false, listening: null,
   };
+  let voice = null;
+  let disarmTimer = 0;
   let lastCongressIndex = 0;
   let lastCount = -1;
   let destroyed = false;
@@ -109,6 +111,7 @@ export default function sessionView({ app }) {
   }
 
   function awaitingAI() {
+    if (s.listening) return true;
     if (congress) {
       const seg = segment();
       return seg ? seg.stance !== userStance : false;
@@ -189,6 +192,7 @@ export default function sessionView({ app }) {
         cf ? `Crossfire — ${p.name} answers question ${cf.index} of ${cf.total}` : `Now speaking: ${p.name} · ${p.side} · ${p.role}`);
     }
     if (congress) {
+      if (s.listening) return h("div", { class: "banner" }, icon("speaker"), `${s.listening.speaker} has the floor — listen to the full speech`);
       const seg = activeSegment();
       if (!seg) return h("div", { class: "banner" }, icon("flag"), "Main speeches complete — the floor is open");
       const mine = userTurnInCongress();
@@ -201,7 +205,7 @@ export default function sessionView({ app }) {
   function renderHeader() {
     replace(headerRegion, topicBox(congress ? config.committee : "Resolution", config.topic, banner()));
     replace(actions,
-      congress ? h("button", { type: "button", class: "button secondary compact", disabled: s.thinking || s.inquiryPending, onClick: openInquiry }, icon("hand"), "Point of inquiry") : null,
+      congress ? h("button", { type: "button", class: "button secondary compact", disabled: s.thinking || s.inquiryPending || Boolean(s.listening), onClick: openInquiry }, icon("hand"), "Point of inquiry") : null,
       h("button", { type: "button", class: "button primary compact", disabled: s.thinking, onClick: endTapped }, judged || team || congress ? "End Round" : "End Debate"));
   }
 
@@ -242,7 +246,77 @@ export default function sessionView({ app }) {
     box.send.disabled = s.thinking || awaitingAI() || !box.value();
   }
 
+  const listenFill = h("div", { class: "bar-fill", style: { width: "0%" } });
+  const listenTitle = h("strong");
+  const listenNote = h("span", { class: "subtext small" });
+  const skipButton = h("button", { type: "button", class: "button secondary compact", onClick: skipTapped });
+  const keepButton = h("button", { type: "button", class: "button secondary compact", onClick: () => disarm() }, "Keep listening");
+  const listenCard = h("section", { class: "card listen-card", "aria-label": "Speech in progress" },
+    h("div", { class: "listen-head" },
+      h("span", { class: "listen-icon" }, icon("speaker")),
+      h("div", { class: "stack-sm", style: { gap: "2px" } }, listenTitle, listenNote)),
+    h("div", { class: "bar" }, listenFill),
+    h("div", { class: "button-row start" }, skipButton, keepButton));
+
+  function paintListening() {
+    const l = s.listening;
+    if (!l) return;
+    listenTitle.textContent = `${l.speaker} has the floor`;
+    listenFill.style.width = `${Math.round(l.progress * 100)}%`;
+    listenNote.textContent = l.armed
+      ? "You'll miss the rest of their speech, and you need it to rebut. Tap Skip anyway to confirm."
+      : l.silent
+        ? "Audio isn't available in this browser right now, so read along in the speech above. Your clock starts when it ends."
+        : "Listen to the whole speech before you answer, just like in a real chamber. Your clock starts when it ends.";
+    skipButton.textContent = l.armed ? "Skip anyway" : "Skip speech";
+    skipButton.classList.toggle("danger", l.armed);
+    keepButton.hidden = !l.armed;
+  }
+
+  function disarm() {
+    clearTimeout(disarmTimer);
+    if (s.listening) s.listening.armed = false;
+    paintListening();
+  }
+
+  function skipTapped() {
+    if (!s.listening) return;
+    if (!s.listening.armed) {
+      s.listening.armed = true;
+      clearTimeout(disarmTimer);
+      disarmTimer = setTimeout(disarm, 6000);
+      return paintListening();
+    }
+    finishListening();
+  }
+
+  function listenTo(text, speaker) {
+    s.timerRunning = false;
+    s.listening = { speaker, progress: 0, armed: false };
+    voice = speak(text, config.language, {
+      onProgress: (p) => { if (s.listening) { s.listening.progress = p; paintListening(); } },
+      onEnd: finishListening,
+      onSilent: () => { if (s.listening && !s.listening.silent) { s.listening.silent = true; paintListening(); } },
+    });
+  }
+
+  function finishListening() {
+    if (!s.listening || destroyed) return;
+    clearTimeout(disarmTimer);
+    voice?.stop();
+    voice = null;
+    s.listening = null;
+    resetClock();
+    update();
+    advanceIfAITurn();
+  }
+
   function renderBottom() {
+    if (s.listening) {
+      box.stop();
+      paintListening();
+      return replace(bottomRegion, listenCard);
+    }
     if (config.lowPressure && !s.ready && !multiplayer) return replace(bottomRegion);
     if (openFloor() && !s.floorSpeaking) {
       box.stop();
@@ -276,6 +350,7 @@ export default function sessionView({ app }) {
   }
 
   function resetClock() {
+    if (s.listening) { s.timerRunning = false; return; }
     const seg = activeSegment();
     if (!congress || !seg || !userTurnInCongress()) { s.timerRunning = false; return; }
     s.remaining = seg.seconds;
@@ -314,7 +389,7 @@ export default function sessionView({ app }) {
   }
 
   function advanceIfAITurn() {
-    if (s.thinking || destroyed) return;
+    if (s.thinking || s.listening || destroyed) return;
     if (congress) {
       const seg = segment();
       if (seg && seg.stance !== userStance) requestReply();
@@ -369,7 +444,8 @@ export default function sessionView({ app }) {
       const reply = await api.ai.turn(config, s.messages);
       const speaker = team ? "Opposing team" : congress ? (userIsAuthor ? "Opposing member" : "Bill sponsor") : modeInfo(mode).assistantLabel;
       s.messages.push({ id: newId(), role: "assistant", text: reply, speaker, kind });
-      if (prefs.readAloud && !destroyed) speak(reply, config.language);
+      if (congress && !destroyed) listenTo(reply, speaker);
+      else if (prefs.readAloud && !destroyed) speak(reply, config.language);
     } catch (e) {
       s.error = e.message;
     }
@@ -459,6 +535,8 @@ export default function sessionView({ app }) {
     destroy() {
       destroyed = true;
       clearInterval(ticker);
+      clearTimeout(disarmTimer);
+      voice?.stop();
       box.stop();
       document.body.classList.remove("focus-mode");
     },

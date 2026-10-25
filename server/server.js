@@ -199,6 +199,8 @@ async function handleAPI(req, res, action) {
       return send(res, 200, { decision: await claude.judgeRound(config, history) });
     case "inquiry":
       return send(res, 200, { text: await claude.pointOfInquiry(config, text(b.question, 1000), history) });
+    case "voice":
+      return send(res, 200, { audio: await claude.voice(text(b.text, 1500)) });
     case "statlookup":
       return send(res, 200, { text: await claude.lookUpStatistic(text(b.question, 500), b.committee, config.language) });
     default:
