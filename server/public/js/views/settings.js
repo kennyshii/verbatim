@@ -23,7 +23,7 @@ export default function settingsView({ app }) {
   const renderStatus = () => replace(aiStatus,
     h("div", { class: "kv" }, h("span", null, "Model"), h("code", null, app.ai.model || "—")),
     h("div", { class: "kv" }, h("span", null, "Server API key"), h("span", { class: app.ai.ready ? "ok-text" : "error" }, app.ai.ready ? "Configured" : "Missing")),
-    subtext("The Anthropic API key lives on the Verbatim server, never in your browser. To change it, edit ANTHROPIC_API_KEY in server/.env and restart the server.", "small"));
+    subtext("The AI key lives on the Verbatim server, never in your browser. To change it, edit ANTHROPIC_API_KEY or GEMINI_API_KEY in server/.env and restart the server.", "small"));
   renderStatus();
 
   const el = h("div", { class: "page narrow" },
