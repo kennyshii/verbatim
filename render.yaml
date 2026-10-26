@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: verbatim
+    runtime: node
+    plan: free
+    branch: new-design
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ACCESS_CODE
+        sync: false
+      - key: TRUST_PROXY
+        value: "1"

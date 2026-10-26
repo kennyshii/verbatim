@@ -44,8 +44,7 @@ export default function loginView({ app }) {
   const signin = h("section", { class: "signin", id: "signin" },
     h("h2", { class: "words reveal" }, maskWords("Make your case.")),
     h("form", { class: "stack reveal", style: { "--i": 1 }, onSubmit },
-      segments, username, password, error, submit,
-      h("p", { class: "subtext small center" }, "Your account and progress are saved in this browser.")),
+      segments, username, password, error, submit),
     h("a", { class: "more-link reveal", style: { "--i": 2, alignSelf: "center" }, href: "#/join" }, "Have a room code? Join a round", icon("chevron")));
 
   const toSignin = (e) => {
@@ -58,11 +57,9 @@ export default function loginView({ app }) {
   const hero = h("header", { class: "hero" },
     h("div", { class: "reveal" }, logoMark(26)),
     heroTitle,
-    h("p", { class: "lede reveal", style: { "--i": 2 } }, "Practice debate and Model Congress against an AI that argues back. Then read a ballot that quotes you word for word."),
     h("div", { class: "hero-actions reveal", style: { "--i": 3 } },
       h("a", { class: "button primary", href: "#signin", onClick: toSignin }, "Get started"),
-      h("a", { class: "more-link", href: "#/join" }, "Join a round", icon("chevron"))),
-    h("div", { class: "scroll-cue", "aria-hidden": "true" }, "Scroll", icon("chevron", "icon rot")));
+      h("a", { class: "more-link", href: "#/join" }, "Join a round", icon("chevron"))));
 
   const bubbles = [
     ["Opponent · Negative", "Colonization money could end famine on Earth today. A moral imperative can't ask the poor to pay for a hypothetical future.", ""],
@@ -87,8 +84,7 @@ export default function loginView({ app }) {
       h("div", { class: "device-side" },
         h("span", { class: "subtext small" }, "Live delivery"),
         h("div", { class: "device-score" }, mockScore, h("span", null, "%")),
-        meters.map((m) => m.el),
-        h("p", { class: "subtext small" }, "Two fillers caught. Scored as you type or speak."))));
+        meters.map((m) => m.el))));
   const showcase = h("section", { class: "showcase" }, device);
 
   const story = wordReveal("Verbatim takes the other side, keeps the clock, judges the round, and hands back your strongest line exactly as you said it.");
@@ -104,29 +100,27 @@ export default function loginView({ app }) {
 
   const quoteDemo = h("div", { class: "demo reveal" },
     h("span", { class: "subtext small" }, "Ballot · your strongest line"),
-    h("p", { class: "quote" }, "“Rivers are being treated as property to be ", h("mark", null, "used up"), ".”"),
-    h("p", { class: "subtext" }, "Two words carry your whole framework. Say them again in the rebuttal."));
+    h("p", { class: "quote" }, "“Rivers are being treated as property to be ", h("mark", null, "used up"), ".”"));
 
   const clock = h("div", { class: "speech-clock-time" }, "4:00");
   const clockDemo = h("div", { class: "demo reveal" },
     h("span", { class: "subtext small" }, "Judiciary · your constructive"),
     clock,
-    h("div", { class: "bar" }, h("div", { class: "bar-fill", style: { width: "100%", transition: "none" } })),
-    h("p", { class: "subtext" }, "Rise to a point of inquiry any time. A separate parliamentarian rules on it."));
+    h("div", { class: "bar" }, h("div", { class: "bar-fill", style: { width: "100%", transition: "none" } })));
   const clockBar = clockDemo.querySelector(".bar-fill");
 
-  const chapter = (title, lede, demo, extra = "") => h("section", { class: `chapter ${extra}` },
-    h("div", { class: "reveal" }, h("h2", { class: "words reveal" }, maskWords(title)), h("p", { class: "lede" }, lede)),
+  const chapter = (title, demo, extra = "") => h("section", { class: `chapter ${extra}` },
+    h("div", { class: "reveal" }, h("h2", { class: "words reveal" }, maskWords(title))),
     demo);
 
   const el = h("div", { class: "welcome" },
     hero,
     showcase,
     storySection,
-    chapter("Hear every um.", "Filler words, run-ons, and hedging are scored as you type or speak, five points for every filler. Watch them fall away as you practice.", fillerDemo),
+    chapter("Hear every um.", fillerDemo),
     h("div", { class: "dark-band" },
-      chapter("Your best line, highlighted.", "The coach quotes your speeches back to you verbatim, so you know exactly which words won the point and which ones lost it.", quoteDemo, "flip")),
-    chapter("Model Congress, on the clock.", "Sixteen real committees, timed speeches, amendments, and a parliamentarian who tells you where to check every figure.", clockDemo),
+      chapter("Your best line, highlighted.", quoteDemo, "flip")),
+    chapter("Model Congress, on the clock.", clockDemo),
     signin);
 
   const stops = [

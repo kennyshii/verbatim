@@ -1,8 +1,8 @@
 import { isJudged } from "../data.js";
 import { recurringTags } from "../feedback.js";
-import { analyzeTurns, overall } from "../metrics.js";
+import { analyzeTurns } from "../metrics.js";
 import * as store from "../store.js";
-import { formatDate, h, meterBar, navRow, pageHeader, sectionLabel, statTile, subtext, topicBox } from "../ui.js";
+import { formatDate, h, meterBar, navRow, pageHeader, sectionLabel, statTile, topicBox } from "../ui.js";
 import { messageBubble } from "./bubble.js";
 import { resultView } from "./feedback.js";
 import { averageAccuracy, ownTurns } from "./home.js";
@@ -34,8 +34,7 @@ export function progressView({ app }) {
           statTile(String(streak.current), "Current streak", "flame", 0),
           statTile(String(streak.longest), "Longest streak", "trophy", 1),
           statTile(String(sessions.length), "Rounds", "checkCircle", 2),
-          statTile(accuracy === null ? "—" : `${accuracy}%`, "Avg. delivery", "wave2", 3)),
-        subtext("Streak counts consecutive days with at least one completed session. Presentational accuracy blends filler words (−5 each), smoothness, and tone.")),
+          statTile(accuracy === null ? "—" : `${accuracy}%`, "Avg. delivery", "wave2", 3))),
       (() => {
         const lines = bestLines(sessions);
         return lines.length ? h("section", { class: "stack reveal" },
@@ -57,7 +56,6 @@ export function progressView({ app }) {
           ? h("div", { class: "group" }, sessions.map((s) => navRow({
               iconName: s.kind === "congress" ? "congress" : "debate",
               title: s.topic,
-              detail: `${formatDate(s.createdAt)} · ${s.mode} · ${overall(analyzeTurns(ownTurns(s)))}%`,
               href: `#/progress/${s.id}`,
             })))
           : empty("No rounds yet. Finish one and it shows up here."))));
@@ -78,7 +76,7 @@ export function sessionDetailView({ params, app }) {
       topicBox(session.kind === "congress" ? session.committee || "Legislation" : "Resolution", session.topic,
         `${formatDate(session.createdAt)} · ${session.mode} · ${session.difficulty} · ${session.language}`),
       h("h2", { class: "accent-heading" }, isJudged(session.mode) ? "Decision" : "Feedback"),
-      session.feedback ? resultView(session.feedback, config) : subtext("No feedback was saved for this session."),
+      session.feedback ? resultView(session.feedback, config) : h("p", null, "No feedback was saved for this session."),
       h("section", { class: "card stack" }, sectionLabel("Delivery"), meterBar(analyzeTurns(ownTurns(session)))),
       h("h2", { class: "accent-heading" }, "Transcript"),
       h("div", { class: "transcript" }, session.transcript.map((m) => messageBubble(m, session.mode, { language: session.language })))));

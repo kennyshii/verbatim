@@ -223,7 +223,6 @@ function showGate() {
   replace(main, h("div", { class: "login" },
     h("form", { class: "login-card", onSubmit },
       h("div", { class: "brand-large" }, logoMark(30), h("span", null, "Verbatim")),
-      h("p", { class: "subtext center" }, "Enter the access code you were given to continue."),
       code, error, button)));
   renderShell();
   code.focus();

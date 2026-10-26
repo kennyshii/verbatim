@@ -167,7 +167,7 @@ export function slidingPill(container, selector = ".selected") {
   return place;
 }
 
-const MORPH_SOURCES = ".mode-card, .resolution-card, .line-card, a.nav-row, .feature-tile a.button";
+const MORPH_SOURCES = ".resolution-card, .line-card, a.nav-row, .feature-tile a.button";
 let press = null;
 let morphHome = null;
 

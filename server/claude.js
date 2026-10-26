@@ -187,7 +187,7 @@ async function sendGemini(system, messages, maxTokens, name = model()) {
   return text;
 }
 
-async function send(system, messages, maxTokens) {
+async function send(system, messages, maxTokens, retried = false) {
   if (!messages.length) throw new ClaudeError("There's nothing to respond to yet.", 400);
   if (useGemini()) return sendGemini(system, messages, maxTokens);
   const key = process.env.ANTHROPIC_API_KEY;
@@ -207,7 +207,8 @@ async function send(system, messages, maxTokens) {
   const json = await res.json().catch(() => null);
   if (!res.ok) throw new ClaudeError(`API error (${res.status}): ${json?.error?.message || `HTTP ${res.status}`}`);
   const text = (json?.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-  if (!text) throw new ClaudeError("The API returned an unexpected response.");
+  if (!text && !retried) return send(system, messages, maxTokens, true);
+  if (!text) throw new ClaudeError(`The API returned an unexpected response${json?.stop_reason ? ` (${json.stop_reason})` : ""}.`);
   return text;
 }
 

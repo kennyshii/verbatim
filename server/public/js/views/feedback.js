@@ -11,8 +11,7 @@ export function deliveryCard(config, transcript) {
     : [meterBar(analyzeTurns(transcript.filter((m) => m.role === "user").map((m) => m.text)))];
   return h("section", { class: "card stack" },
     sectionLabel("Delivery"),
-    meters,
-    h("p", { class: "subtext small" }, "Filler words cost 5 points each. Smoothness looks at run-ons, fragments, and stumbles; tone looks for hedging or an overheated voice. Aim for 90 or higher."));
+    meters);
 }
 
 export function resultView(result, config) {
@@ -46,8 +45,7 @@ export default function feedbackView({ app }) {
     replace(content,
       resultView(pending.result, config),
       deliveryCard(config, transcript),
-      h("button", { type: "button", class: "button secondary", onClick: () => { stopSpeaking(); generate(true); } }, icon("rebut"), judged ? "Judge Again" : "Regenerate Feedback"),
-      h("p", { class: "ai-note" }, `${pending.saved ? "Saved to your progress. " : ""}${judged ? "The decision" : "Feedback"} is written by AI and can be wrong. Quoted words come from your speeches.`));
+      h("button", { type: "button", class: "button secondary", onClick: () => { stopSpeaking(); generate(true); } }, icon("rebut"), judged ? "Judge Again" : "Regenerate Feedback"));
   }
 
   async function generate(again = false) {

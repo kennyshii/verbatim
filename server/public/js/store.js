@@ -5,6 +5,7 @@ const KEYS = {
   current: "verbatim.currentUser",
   prefs: "verbatim.prefs",
   community: "verbatim.community",
+  notes: "verbatim.notes",
 };
 
 function read(key, fallback) {
@@ -150,6 +151,9 @@ function updateStreak(userId) {
   all[userId] = { current, longest: Math.max(existing.longest, current), lastActiveDate: today };
   write(KEYS.streaks, all);
 }
+
+export const notes = (userId) => read(KEYS.notes, {})[userId] || "";
+export const saveNotes = (userId, text) => write(KEYS.notes, { ...read(KEYS.notes, {}), [userId]: text });
 
 export const communityPosts = () => read(KEYS.community, null);
 export const saveCommunityPosts = (posts) => write(KEYS.community, posts);

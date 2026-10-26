@@ -3,7 +3,7 @@ import * as api from "../api.js";
 import { analyzeTurns, containsStatistic } from "../metrics.js";
 import { speak, stop as stopSpeaking } from "../speech.js";
 import * as store from "../store.js";
-import { confirmDialog, feedbackSections, h, icon, judgeDecision, meterBar, pageHeader, replace, sectionLabel, subtext, topicBox } from "../ui.js";
+import { confirmDialog, feedbackSections, h, icon, judgeDecision, meterBar, pageHeader, replace, sectionLabel, topicBox } from "../ui.js";
 import { messageBubble } from "./bubble.js";
 import { composer, crossfireLabel } from "./session.js";
 
@@ -54,8 +54,7 @@ export function joinForm(app, onJoined, presetCode = "") {
   return h("form", { class: "stack", onSubmit: submit },
     h("label", { class: "field-label" }, "Room code"), code,
     h("label", { class: "field-label" }, "Your name"), name,
-    error, button,
-    subtext("Ask the host for the six-character code on their screen. No account needed.", "small"));
+    error, button);
 }
 
 export function joinPageView({ query, app }) {
@@ -72,7 +71,7 @@ export function roomView({ params, app }) {
     const el = h("div", { class: "page narrow" },
       pageHeader({ title: "Join a round", back: { href: app.user ? "#/debate" : "#/login", label: "Back" } }),
       h("div", { class: "card stack" },
-        subtext(`You haven't joined room ${code} in this browser yet.`),
+        h("p", null, `You haven't joined room ${code} in this browser yet.`),
         joinForm(app, () => location.reload(), code)));
     return { el, title: "Join a round" };
   }
@@ -169,7 +168,6 @@ export function roomView({ params, app }) {
       h("section", { class: "card stack-sm" },
         h("div", { class: "subtext small" }, "Room code"),
         h("div", { class: "room-code" }, room.code),
-        subtext(`Share this code. Others open ${location.host}, choose "Join a round with a code", and enter it with their name.`, "small"),
         h("div", null, shareButton)),
       h("section", { class: "stack-sm" },
         sectionLabel(`Debaters (${room.players.length}/${room.capacity})`),
@@ -180,7 +178,7 @@ export function roomView({ params, app }) {
         open.map(() => h("div", { class: "player-row waiting" }, icon("clock", "icon muted"), h("span", { class: "subtext" }, "Waiting for a debater to join…")))),
       isHost()
         ? h("button", { type: "button", class: "button primary", disabled: room.players.length < room.capacity, onClick: () => setStatus("live") }, room.players.length >= room.capacity ? "Start the round" : "Waiting for everyone…")
-        : subtext("The host starts the round once everyone has joined."),
+        : null,
       error ? h("p", { class: "error" }, error) : null,
     ];
   }
@@ -204,9 +202,6 @@ export function roomView({ params, app }) {
     replace(bannerRegion, banner());
     const cfg = config();
     replace(transcriptRegion,
-      room.speeches.length ? null : h("p", { class: "subtext intro" }, room.format === "Team vs AI"
-        ? "The case speaker opens, the AI opposing team answers, then crossfire: the AI asks your team three questions you answer live, one at a time."
-        : "The affirmative opens. Each debater speaks from their own device when the banner says it's their turn."),
       transcript().map((m) => messageBubble(m, room.format, { language: cfg?.language, showMetrics: prefs.showFillerMeter })),
       aiInFlight ? h("p", { class: "subtext thinking" }, h("span", { class: "spinner" }), room.expected?.kind === "crossfireQ" ? "Opposing team is preparing crossfire questions…" : "Opposing team is responding…") : null,
       error ? h("p", { class: "error" }, error) : null);
@@ -233,7 +228,6 @@ export function roomView({ params, app }) {
   function judging() {
     return h("div", { class: "loading stack" },
       h("div", null, h("span", { class: "spinner" }), isJudged(room.format) ? "The judge is deciding…" : "The coach is reviewing the round…"),
-      isHost() ? subtext("Your browser is running the judge for everyone.", "small") : null,
       error ? [h("p", { class: "error" }, error), isHost() ? h("button", { type: "button", class: "button secondary compact", onClick: runJudging }, "Retry") : null] : null);
   }
 
@@ -245,11 +239,10 @@ export function roomView({ params, app }) {
         ? judgeDecision(room.result.decision, { affirmative: namesOn(cfg, "Affirmative"), negative: namesOn(cfg, "Negative"), language })
         : room.result?.feedback
           ? feedbackSections(room.result.feedback, { language })
-          : subtext("The round ended without a result."),
+          : h("p", null, "The round ended without a result."),
       h("section", { class: "card stack" },
         sectionLabel("Delivery"),
         sorted().map((p) => meterBar(analyzeTurns(room.speeches.filter((s) => s.playerId === p.id).map((s) => s.text)), { title: `${p.name} — presentational accuracy` }))),
-      saved ? subtext("Saved to your progress.", "small") : !app.user ? subtext("Log in before joining a round to save it to your progress.", "small") : null,
       h("h2", { class: "accent-heading" }, "Transcript"),
       h("div", { class: "transcript" }, transcript().map((m) => messageBubble(m, room.format, { language }))),
     ];

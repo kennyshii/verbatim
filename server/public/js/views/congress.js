@@ -3,7 +3,7 @@ import { reveal } from "../motion.js";
 import * as api from "../api.js";
 import { ACCEPT, extract, suggestedTitle } from "../document.js";
 import * as store from "../store.js";
-import { chip, h, icon, modal, navRow, optionCard, pageHeader, readAloudButton, replace, richText, sectionLabel, subtext } from "../ui.js";
+import { chip, h, icon, modal, navRow, optionCard, pageHeader, readAloudButton, replace, richText, sectionLabel } from "../ui.js";
 import { aiWarning } from "./home.js";
 import { difficultySection } from "./setup.js";
 
@@ -16,7 +16,7 @@ export function congressListView() {
     const filtered = COMMITTEES.filter((c) => !q || c.name.toLowerCase().includes(q) || c.jurisdiction.toLowerCase().includes(q));
     replace(list, filtered.length
       ? filtered.map((c, i) => {
-          const row = navRow({ iconName: "congress", title: c.name, badge: c.chamber, detail: c.jurisdiction, href: `#/congress/${c.slug}` });
+          const row = navRow({ iconName: "congress", title: c.name, badge: c.chamber, href: `#/congress/${c.slug}` });
           row.classList.add("reveal");
           row.style.setProperty("--i", String(i % 2));
           return row;
@@ -30,7 +30,6 @@ export function congressListView() {
   const el = h("div", { class: "page" },
     pageHeader({ title: "Model Congress" }),
     h("div", { class: "stack-lg" },
-      h("p", { class: "lede", style: { fontSize: "21px", color: "var(--ink2)", maxWidth: "640px" } }, "Pick the committee you would like to practice; options vary by jurisdiction, data sources, and legislation to debate."),
       search,
       sectionLabel("Committees"),
       h("div", { class: "committee-grid" }, list)));
@@ -64,7 +63,6 @@ function statLookup(app, committee, language) {
           h("section", { class: "card stack-sm" },
             h("div", { class: "feedback-head" }, sectionLabel("Result"), readAloudButton(answer, language)),
             richText(answer)),
-          subtext("This comes from the model's training data, not a live feed — anything marked (verify) should be checked against the source links before you use it in a round.", "small"),
           sectionLabel("Check it here"),
           committee.sources.map((src) => sourceLink(src, true)),
         ] : null);
@@ -88,7 +86,6 @@ function statLookup(app, committee, language) {
 
     render();
     return h("div", { class: "stack" },
-      subtext("Ask for a number in this committee's area. You'll get the figure, how to use it, and the source that publishes it."),
       question, button, results);
   });
 }
@@ -151,7 +148,6 @@ export function committeeView({ params, app }) {
       committee.bills.map((bill) => optionCard({ title: bill, selected: !state.useUpload && state.billChoice === bill, onClick: () => { state.useUpload = false; state.billChoice = bill; render(); } })),
       optionCard({
         title: uploaded ? titleInput.value || state.uploadedName : state.reading ? "Reading the file…" : "Upload a bill",
-        subtitle: uploaded ? `${state.uploadedName} · ${state.uploadedText.length.toLocaleString()} characters read` : "PDF, DOCX, TXT, RTF, or Markdown. The text is read and given to your opponent and the parliamentarian.",
         iconName: "upload",
         selected: state.useUpload,
         onClick: () => { if (!uploaded) fileInput.click(); else { state.useUpload = true; render(); } },
@@ -172,10 +168,7 @@ export function committeeView({ params, app }) {
   function sideSection() {
     return h("section", { class: "stack" },
       sectionLabel("Your side"),
-      h("div", { class: "chips" }, SIDES.map((s) => chip({ label: s === "Affirmative" ? "Affirm the bill" : "Negate the bill", selected: state.side === s, onClick: () => { state.side = s; render(); } }))),
-      subtext(state.side === "Affirmative"
-        ? "You sponsor the bill and give the authorship speech. The AI member speaks against it."
-        : "The AI member sponsors the bill and gives the authorship speech from the author's perspective. You speak against it — useful when you've uploaded an opponent's bill."));
+      h("div", { class: "chips" }, SIDES.map((s) => chip({ label: s === "Affirmative" ? "Affirm the bill" : "Negate the bill", selected: state.side === s, onClick: () => { state.side = s; render(); } }))));
   }
 
   function formatSection() {
@@ -205,15 +198,13 @@ export function committeeView({ params, app }) {
     replace(body,
       h("section", { class: "card tint stack-sm" },
         h("div", { class: "subtext small" }, committee.chamber),
-        h("h2", { class: "accent-heading" }, committee.fullName),
-        h("p", null, committee.jurisdiction)),
+        h("h2", { class: "accent-heading" }, committee.fullName)),
       h("section", { class: "stack" },
         sectionLabel("Agencies it oversees"),
         h("div", { class: "chips wrap" }, committee.agencies.map((a) => h("span", { class: "pill" }, a))),
         sectionLabel("Where to find reliable numbers"),
         h("div", { class: "card sources" }, committee.sources.map((src) => sourceLink(src))),
-        h("button", { type: "button", class: "button secondary", onClick: () => statLookup(app, committee, prefs.language) }, icon("chart"), "Look up a statistic"),
-        subtext("Pull a figure for this committee's area with its source, so you can check it before using it at the podium.", "small")),
+        h("button", { type: "button", class: "button secondary", onClick: () => statLookup(app, committee, prefs.language) }, icon("chart"), "Look up a statistic")),
       legislationSection(),
       sideSection(),
       difficultySection(state, render),

@@ -408,20 +408,13 @@ export default function communityView({ app }) {
 
   const el = h("div", { class: "page community" },
     h("header", { class: "hero compact-hero" },
-      h("h1", { class: "words reveal" }, maskWords("Take 2.")),
-      h("p", { class: "lede reveal", style: { "--i": 1 } }, "Four seconds, one argument. Post your best line out loud and hear how other debaters say theirs.")),
+      h("h1", { class: "words reveal" }, maskWords("Take 2."))),
     h("div", { class: "feed-layout" },
       h("div", { class: "feed" }, composerCard, feed),
       h("aside", { class: "feed-side" },
         h("section", { class: "card stack-sm" },
           h("span", { class: "eyebrow" }, "Trending resolutions"),
-          trending),
-        h("section", { class: "card stack-sm" },
-          h("span", { class: "eyebrow" }, "How Take 2 works"),
-          h("ol", { class: "how-list" },
-            h("li", null, "Type the argument you're citing."),
-            h("li", null, `Record a ${CLIP_SECONDS}-second take. It stops on its own.`),
-            h("li", null, "Hit Take 2 on any post to answer it with your own."))))));
+          trending))));
 
   return {
     el,

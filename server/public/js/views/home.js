@@ -1,4 +1,4 @@
-import { DEBATE_MODES, FEATURED_RESOLUTION, SUGGESTED_RESOLUTIONS, modeInfo } from "../data.js";
+import { FEATURED_RESOLUTION, SUGGESTED_RESOLUTIONS } from "../data.js";
 import { analyzeTurns, overall } from "../metrics.js";
 import { gallery, trackProgress } from "../motion.js";
 import * as store from "../store.js";
@@ -20,14 +20,6 @@ export function aiWarning(app) {
 export function currentResolution() {
   return FEATURED_RESOLUTION;
 }
-
-const MODE_LINES = {
-  Debate: ["Argue it out.", "The AI takes the other side and pushes back on every weak link, live."],
-  Coach: ["Get coached.", "No opponent. Structured, honest feedback after every single speech."],
-  "1v1": ["Face a friend.", "Same device or online with a code. An AI judge writes the ballot."],
-  "2v2": ["Bring a team.", "Public Forum, two on two. First speakers build, second speakers rebut."],
-  "Team vs AI": ["Partner up.", "You and a partner against an AI team, with live crossfire."],
-};
 
 function greeting() {
   const hour = new Date().getHours();
@@ -55,16 +47,12 @@ export default function homeView({ app }) {
     onProgress: (p) => featureTile.style.setProperty("--p", Math.min(1, p * 2.2).toFixed(3)),
   });
 
-  const modeCards = DEBATE_MODES.map((id) => {
-    const mode = modeInfo(id);
-    const [headline, line] = MODE_LINES[id];
-    return h("a", { class: "mode-card", href: `#/debate/setup?mode=${encodeURIComponent(id)}` },
-      h("span", { class: "mode-glyph" }, icon(mode.icon)),
-      h("span", { class: "eyebrow" }, id),
-      h("h3", null, headline),
-      h("p", null, line),
-      h("span", { class: "more-link" }, "Start", icon("chevron")));
-  });
+  const notes = h("textarea", { class: "notepad-field", placeholder: "Write down what you want to say…", "aria-label": "My notepad" });
+  notes.value = store.notes(app.user.id);
+  notes.addEventListener("input", () => store.saveNotes(app.user.id, notes.value));
+  const notepad = h("section", { class: "notepad reveal" },
+    h("h2", null, "My notepad"),
+    notes);
 
   const resolutionCards = SUGGESTED_RESOLUTIONS.filter((r) => r !== featured.text).map((r) =>
     h("a", { class: "resolution-card", href: setupFor(r) },
@@ -82,9 +70,7 @@ export default function homeView({ app }) {
     h("div", { class: "stack-xl", style: { marginTop: "48px" } },
       featureTile,
       warning,
-      h("section", { class: "stack reveal" },
-        h("div", { class: "section-head" }, h("h2", null, "Ways to practice.")),
-        gallery(modeCards, { label: "Practice modes" })),
+      notepad,
       h("section", { class: "stack reveal" },
         h("div", { class: "section-head" }, h("h2", null, "More resolutions."), h("a", { class: "more-link", href: "#/debate/setup" }, "All topics", icon("chevron"))),
         gallery(resolutionCards, { label: "Resolutions" })),
@@ -97,7 +83,6 @@ export default function homeView({ app }) {
       h("section", { class: "feature-tile light reveal" },
         h("span", { class: "eyebrow" }, "Play a friend"),
         h("h2", { class: "accent-heading" }, "Got a room code?"),
-        h("p", { class: "subtext", style: { fontSize: "19px" } }, "Join a round someone else started. No account needed on their end."),
         h("button", { type: "button", class: "button primary", style: { width: "auto" }, onClick: () => modal("Join a round", (close) => joinForm(app, (code) => { close(); app.go(`/room/${code}`); })) },
           icon("hash"), "Join a round"))));
 

@@ -2,12 +2,13 @@ import {
   FLOOR_SPEECH, congressIsOpenFloor, congressSegment, effectiveKind, isJudged, isMultiplayer, modeInfo, questionsIn, teamStep,
 } from "../data.js";
 import * as api from "../api.js";
+import { reveal } from "../motion.js";
 import { analyze, containsStatistic } from "../metrics.js";
 import { dictation, speak, stop as stopSpeaking } from "../speech.js";
 import * as store from "../store.js";
-import { autoGrow, confirmDialog, h, icon, meterBar, modal, pageHeader, replace, subtext, topicBox } from "../ui.js";
+import { autoGrow, confirmDialog, h, icon, meterBar, modal, pageHeader, replace, topicBox } from "../ui.js";
 import { messageBubble } from "./bubble.js";
-import { recordingReport, rerecordDialog } from "./report.js";
+import { analysisPage, rerecordDialog } from "./report.js";
 
 const TITLES = { Debate: "Debate", Coach: "Coach session", "1v1": "1v1", "2v2": "2v2", "Team vs AI": "Team vs AI", Congress: "Congress round" };
 
@@ -33,11 +34,15 @@ export function composer({ language, placeholder, onSend, onInput }) {
     onInput();
   };
 
+  const listeningCard = h("div", { class: "listening-card", role: "status", hidden: true },
+    h("span", { class: "listening-mic" }, icon("mic")),
+    h("span", null, "Listening…"));
   const dictate = dictation(textarea, language, (listening) => {
     if (listening) recorded = true;
     if (listening !== undefined && mic) {
       mic.classList.toggle("listening", listening);
       mic.setAttribute("aria-pressed", listening ? "true" : "false");
+      listeningCard.hidden = !listening;
     }
     refresh();
   });
@@ -51,6 +56,7 @@ export function composer({ language, placeholder, onSend, onInput }) {
   });
 
   const el = h("div", { class: "composer-core" },
+    listeningCard,
     h("div", { class: "composer-row" }, textarea, mic, send),
     meter);
 
@@ -140,22 +146,21 @@ export default function sessionView({ app }) {
     return "Type your argument…";
   }
 
-  const intro = {
-    Debate: "Make your opening argument for the resolution. The AI will argue against you.",
-    Coach: "Make your argument. The coach will give you structured feedback on each turn.",
-    "1v1": "Pass the device to whoever is speaking. The affirmative opens. When you're both done, end the round and the judge decides.",
-    "2v2": "Public Forum order: first speakers alternate, then second speakers, then around again. Pass the device to whoever the header names. End the round for the judge's decision.",
-    "Team vs AI": `${config.participants[0]?.name || "The case speaker"} opens with the case. The AI opposing team answers, then crossfire: it asks your team three questions, answered live one at a time, alternating between partners. Then the rebuttal speaker takes over.`,
-    Congress: userIsAuthor
-      ? "You open with a two-minute authorship speech as the bill's sponsor. The AI member answers with a four-minute constructive against it, you give a two-minute second speech, and it closes with two more. Rise to a point of inquiry any time."
-      : "The AI member is the bill's sponsor and opens with a two-minute authorship speech. You answer with a four-minute constructive against it, the sponsor gives a two-minute second speech, and you close with two more. Rise to a point of inquiry any time.",
-  }[mode];
+  function showAnalysis() {
+    box.stop();
+    stopSpeaking();
+    el.className = "page analysis";
+    replace(el, analysisPage({ onBack: hideAnalysis, onRerecord: rerecord }));
+    window.scrollTo(0, 0);
+    reveal(el);
+  }
 
-  const reports = new Map();
-  const reportFor = (m) => {
-    if (!reports.has(m.id)) reports.set(m.id, recordingReport({ onRerecord: rerecord }));
-    return reports.get(m.id);
-  };
+  function hideAnalysis() {
+    el.className = "page narrow session";
+    replace(el, sessionParts);
+    update();
+    window.scrollTo(0, document.documentElement.scrollHeight);
+  }
 
   const headerRegion = h("div", { class: "session-header" });
   const transcriptRegion = h("div", { class: "transcript", "aria-live": "polite" });
@@ -174,14 +179,11 @@ export default function sessionView({ app }) {
     const fill = Math.max(0, Math.min(100, (s.remaining / seg.seconds) * 100));
     replace(clockBox, h("section", { class: "card speech-clock", "aria-label": "Speech clock" },
       h("div", { class: "speech-clock-head" },
-        h("div", { class: "stack-sm", style: { gap: "0" } },
-          h("strong", null, `Your ${seg.title.toLowerCase()}`),
-          h("span", { class: "subtext small" }, `${seg.stance === "Pro" ? "For" : "Against"} the bill · about ${seg.wordBudget} words`)),
+        h("strong", null, `Your ${seg.title.toLowerCase()}`),
         h("button", { type: "button", class: "icon-button mic", "aria-label": s.timerRunning ? "Pause the clock" : "Start the clock", onClick: () => { s.timerRunning = !s.timerRunning; renderClock(); } },
           icon(s.timerRunning ? "pause" : "play"))),
       h("div", { class: `speech-clock-time${over ? " over" : ""}`, role: "timer" }, clockText()),
-      h("div", { class: `bar${over ? " low" : ""}` }, h("div", { class: "bar-fill", style: { width: `${fill}%` } })),
-      h("span", { class: "subtext small" }, over ? "Over time. Wrap up your last point." : s.timerRunning ? "Clock running. It keeps counting past zero." : "Paused. The clock is a guide; nothing cuts you off.")));
+      h("div", { class: `bar${over ? " low" : ""}` }, h("div", { class: "bar-fill", style: { width: `${fill}%` } }))));
   }
 
   function banner() {
@@ -218,7 +220,6 @@ export default function sessionView({ app }) {
         h("li", null, "Breathe in for four counts, hold for four, out for four. Twice."),
         h("li", null, "Say your first point to yourself in one plain sentence."),
         h("li", null, "Remember you can take as long as you want between turns. There's no timer.")),
-      subtext("The opponent will stay calm and courteous and take one or two points at a time. You can end the session whenever you like."),
       h("button", { type: "button", class: "button primary", onClick: () => { s.ready = true; update(); box.textarea.focus(); } }, "I'm ready"));
   }
 
@@ -228,10 +229,9 @@ export default function sessionView({ app }) {
       return;
     }
     replace(transcriptRegion,
-      s.messages.length ? null : h("p", { class: "subtext intro" }, intro),
       s.messages.map((m) => [
         messageBubble(m, mode, { language: config.language, showMetrics: prefs.showFillerMeter }),
-        m.recorded ? reportFor(m) : null]),
+        m.recorded ? h("button", { type: "button", class: "button secondary compact report-open", onClick: showAnalysis }, icon("sparkle"), "View recording analysis") : null]),
       s.thinking ? h("p", { class: "subtext thinking" }, h("span", { class: "spinner" }), "Thinking…") : null,
       s.error ? h("div", { class: "card error-card" },
         h("p", { class: "error" }, s.error),
@@ -321,7 +321,6 @@ export default function sessionView({ app }) {
     if (openFloor() && !s.floorSpeaking) {
       box.stop();
       return replace(bottomRegion,
-        subtext("The main speeches are done. Take the floor again, or yield and let the other member move an amendment."),
         h("div", { class: "button-row" },
           h("button", { type: "button", class: "button primary", onClick: () => { s.floorSpeaking = true; resetClock(); update(); box.textarea.focus(); } }, icon("mic"), "Speak again (2:00)"),
           h("button", { type: "button", class: "button secondary", disabled: s.thinking, onClick: yieldFloor }, icon("wave"), "Yield the floor")));
@@ -345,7 +344,7 @@ export default function sessionView({ app }) {
     const count = s.messages.length + (s.thinking ? 0.5 : 0) + (s.error ? 0.25 : 0);
     if (count !== lastCount) {
       lastCount = count;
-      requestAnimationFrame(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" }));
+      requestAnimationFrame(() => { if (transcriptRegion.isConnected) window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" }); });
     }
   }
 
@@ -377,7 +376,10 @@ export default function sessionView({ app }) {
     s.messages.push(message);
     s.floorSpeaking = false;
     runStatCheck(message);
-    if (team || congress) {
+    if (recorded && !team && !congress && !judged) {
+      update();
+      showAnalysis();
+    } else if (team || congress) {
       s.timerRunning = false;
       update();
       advanceIfAITurn();
@@ -467,9 +469,7 @@ export default function sessionView({ app }) {
       field.addEventListener("input", () => { submit.disabled = s.inquiryPending || !field.value.trim(); });
       requestAnimationFrame(() => field.focus());
       return h("div", { class: "stack" },
-        subtext("Rise to a point of inquiry. A separate parliamentarian AI — not your opponent — will rule on it or look it up, then tell you where to verify the answer."),
-        field, submit,
-        h("p", { class: "subtext small" }, "Inquiries and rulings go into the record but are not scored as speeches."));
+        field, submit);
     });
   }
 
@@ -517,9 +517,8 @@ export default function sessionView({ app }) {
     app.go("/feedback");
   }
 
-  const el = h("div", { class: "page narrow session" },
-    pageHeader({ title: TITLES[mode], actions: [actions] }),
-    headerRegion, transcriptRegion, bottomRegion);
+  const sessionParts = [pageHeader({ title: TITLES[mode], actions: [actions] }), headerRegion, transcriptRegion, bottomRegion];
+  const el = h("div", { class: "page narrow session" }, sessionParts);
 
   document.body.classList.add("focus-mode");
   resetClock();

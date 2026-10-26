@@ -146,29 +146,25 @@ export function richText(text, cls = "rich", { quotes = false } = {}) {
 }
 
 export const sectionLabel = (text) => h("div", { class: "section-label" }, text);
-export const subtext = (text, cls = "") => h("p", { class: `subtext ${cls}` }, text);
 
 export function chip({ label, iconName, selected, onClick }) {
   return h("button", { type: "button", class: `chip${selected ? " selected" : ""}`, "aria-pressed": selected ? "true" : "false", onClick },
     iconName ? icon(iconName) : null, label);
 }
 
-export function optionCard({ title, subtitle, iconName, selected, onClick }) {
+export function optionCard({ title, iconName, selected, onClick }) {
   return h("button", { type: "button", class: `option-card${selected ? " selected" : ""}`, "aria-pressed": selected ? "true" : "false", onClick },
     iconName ? h("span", { class: "option-icon" }, icon(iconName)) : null,
-    h("span", { class: "option-body" },
-      h("span", { class: "option-title" }, title),
-      subtitle ? h("span", { class: "subtext" }, subtitle) : null),
+    h("span", { class: "option-body" }, h("span", { class: "option-title" }, title)),
     icon(selected ? "checkCircle" : "circle", "icon option-check"));
 }
 
-export function navRow({ iconName, title, badge, detail, href, onClick, clamp = true }) {
+export function navRow({ iconName, title, badge, href, onClick }) {
   return h(href ? "a" : "button", { class: "nav-row", style: { padding: "10px 16px" }, href, type: href ? null : "button", onClick },
     h("span", { class: "row-icon" }, icon(iconName)),
     h("span", { class: "row-body" },
       h("span", { class: "row-title" }, title),
-      badge ? h("span", { class: "row-badge" }, badge) : null,
-      detail ? h("span", { class: `subtext${clamp ? " clamp" : ""}` }, detail) : null),
+      badge ? h("span", { class: "row-badge" }, badge) : null),
     icon("chevron", "icon row-chevron"));
 }
 

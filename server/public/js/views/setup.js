@@ -1,20 +1,19 @@
-import { DIFFICULTIES, JUDGE_PRESETS, SIDES, TOPIC_CATEGORIES, humanCount, isJudged, isMultiplayer, opposite } from "../data.js";
+import { DEBATE_MODES, DIFFICULTIES, JUDGE_PRESETS, SIDES, TOPIC_CATEGORIES, isJudged, isMultiplayer, modeInfo, opposite } from "../data.js";
 import * as api from "../api.js";
 import * as store from "../store.js";
-import { chip, h, icon, optionCard, pageHeader, replace, sectionLabel, subtext } from "../ui.js";
+import { chip, h, icon, optionCard, pageHeader, replace, sectionLabel } from "../ui.js";
 import { aiWarning } from "./home.js";
 import { saveSeat } from "./online.js";
 
 export function difficultySection(state, rerender) {
   return h("section", { class: "stack" },
     sectionLabel("Difficulty"),
-    h("div", { class: "chips" }, DIFFICULTIES.map((d) => chip({ label: d.id, iconName: d.icon, selected: state.difficulty === d.id, onClick: () => { state.difficulty = d.id; rerender(); } }))),
-    subtext(DIFFICULTIES.find((d) => d.id === state.difficulty).explanation));
+    h("div", { class: "chips" }, DIFFICULTIES.map((d) => chip({ label: d.id, iconName: d.icon, selected: state.difficulty === d.id, onClick: () => { state.difficulty = d.id; rerender(); } }))));
 }
 
 export default function setupView({ query, app }) {
   const requested = query.get("mode");
-  const mode = ["Debate", "Coach", "1v1", "2v2", "Team vs AI"].includes(requested) ? requested : "Debate";
+  const mode = DEBATE_MODES.includes(requested) ? requested : "Debate";
   const initialTopic = query.get("topic");
   const multiplayer = isMultiplayer(mode);
 
@@ -84,7 +83,6 @@ export default function setupView({ query, app }) {
     const category = TOPIC_CATEGORIES[state.category];
     return h("section", { class: "stack" },
       sectionLabel("Resolution"),
-      subtext(multiplayer ? "Pick sides below." : "You argue for it. In Debate mode the AI argues against."),
       h("div", { class: "chips scroll" },
         TOPIC_CATEGORIES.map((cat, i) => chip({ label: cat.name, iconName: cat.icon, selected: !state.useCustom && state.category === i, onClick: () => {
           state.category = i;
@@ -96,24 +94,19 @@ export default function setupView({ query, app }) {
       state.useCustom
         ? h("div", { class: "stack-sm" },
             h("label", { class: "field-label" }, "Write your own resolution"),
-            customTopic,
-            subtext("Phrase it as a claim you can argue for, not a question."))
-        : [category.topics.map((t) => optionCard({ title: t.text, subtitle: t.period, selected: state.topicChoice === t.text, onClick: () => { state.topicChoice = t.text; render(); } })),
-           h("p", { class: "subtext small" }, "Topics from the National Speech & Debate Association: ",
-             h("a", { href: category.source, target: "_blank", rel: "noopener" }, category.source))]);
+            customTopic)
+        : category.topics.map((t) => optionCard({ title: t.text, selected: state.topicChoice === t.text, onClick: () => { state.topicChoice = t.text; render(); } })));
   }
 
   function connectionSection() {
-    const others = humanCount(mode) - 1;
     return h("section", { class: "stack" },
       sectionLabel("How are you playing?"),
       h("div", { class: "chips" },
         chip({ label: "Same device", iconName: "device", selected: !state.online, onClick: () => { state.online = false; render(); } }),
         chip({ label: "Online with a code", iconName: "wifi", selected: state.online, onClick: () => { state.online = true; render(); } })),
       state.online
-        ? [subtext(`You'll get a six-character code to share. The other ${others === 1 ? "debater joins" : `${others} debaters join`} from their own device with "Join a round with a code" — no account needed.`), displayName]
-        : [subtext("Pass this device around. Each debater types their speech when the header says it's their turn."),
-           mode === "1v1" ? opponentName : null,
+        ? [displayName]
+        : [mode === "1v1" ? opponentName : null,
            mode === "2v2" ? [partnerName, opponentName, opponent2Name] : null,
            mode === "Team vs AI" ? partnerName : null],
       mode === "Team vs AI" ? [
@@ -121,20 +114,14 @@ export default function setupView({ query, app }) {
         h("div", { class: "chips" },
           chip({ label: "I present the case", iconName: "doc", selected: state.userRoleIsCase, onClick: () => { state.userRoleIsCase = true; render(); } }),
           chip({ label: "I rebut", iconName: "rebut", selected: !state.userRoleIsCase, onClick: () => { state.userRoleIsCase = false; render(); } })),
-        subtext(state.online ? "The first person to join takes the other role." : `${val(partnerName) || "Your partner"} takes the other role. The case speaker opens; the AI answers every speech and asks crossfire questions.`),
-      ] : null);
+        ] : null);
   }
 
   function sidesSection() {
     const team = mode === "Team vs AI";
     return h("section", { class: "stack" },
       sectionLabel(team ? "Your team's side" : "Your side"),
-      h("div", { class: "chips" }, SIDES.map((side) => chip({ label: `${team ? "We're" : "I'm"} ${side}`, selected: state.userSide === side, onClick: () => { state.userSide = side; render(); } }))),
-      subtext(team
-        ? `The AI argues the ${opposite(state.userSide).toLowerCase()} as both of its speakers.`
-        : mode === "2v2"
-          ? `Speaking order: first speakers alternate, then second speakers. ${state.userSide === "Affirmative" ? "Your team" : "The other team"} opens.`
-          : "The affirmative speaks first."));
+      h("div", { class: "chips" }, SIDES.map((side) => chip({ label: `${team ? "We're" : "I'm"} ${side}`, selected: state.userSide === side, onClick: () => { state.userSide = side; render(); } }))));
   }
 
   function judgeSection() {
@@ -151,12 +138,19 @@ export default function setupView({ query, app }) {
       state.createError ? h("p", { class: "error" }, state.createError) : null,
       aiWarning(app),
       h("button", { type: "button", class: "button primary", disabled: Boolean(reason) || state.creating, onClick: start }, label),
-      reason && !state.creating ? h("p", { class: "hint" }, icon("info"), reason) : null,
-      h("p", { class: "ai-note" }, isJudged(mode) ? "The judge is AI. Its decision may contain mistakes." : "Your opponent and coach are AI. Replies may contain mistakes."));
+      reason && !state.creating ? h("p", { class: "hint" }, icon("info"), reason) : null);
+  }
+
+  function modeSection() {
+    const switchTo = (id) => app.go(`/debate/setup?mode=${encodeURIComponent(id)}&topic=${encodeURIComponent(resolvedTopic())}`);
+    return h("section", { class: "stack" },
+      sectionLabel("Mode"),
+      h("div", { class: "chips" }, DEBATE_MODES.map((id) => chip({ label: id, iconName: modeInfo(id).icon, selected: mode === id, onClick: () => { if (id !== mode) switchTo(id); } }))));
   }
 
   function render() {
     replace(body,
+      modeSection(),
       topicSection(),
       multiplayer ? connectionSection() : null,
       multiplayer ? sidesSection() : null,
