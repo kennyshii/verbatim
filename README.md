@@ -70,7 +70,6 @@ With an Anthropic key the AI runs on Claude; with only a Gemini key it runs on G
 | `server/claude.js` | Prompts and the Claude / Gemini calls |
 | `server/public/` | The website; `js/views/` has one file per screen |
 | `render.yaml` | Hosting config for Render |
-| `DebatePractice/` | The earlier native iOS prototype (SwiftUI + SQLite) |
 
 ## Privacy and security
 

@@ -5,8 +5,7 @@ One Node process, zero dependencies (Node 20.12+). It serves three things:
 - **The website** in `public/`: all of Verbatim in the browser (Debate, Congress, Progress, Settings).
 - **The AI endpoints** under `/api/*`. Prompts are built here and sent to Claude with the server's key,
   so the key never reaches a browser and the endpoints can't be used as a general Claude proxy.
-- **The relay** under `/rooms/*` that keeps online 1v1, 2v2, and Team vs AI rounds in sync. The iOS app
-  uses the same relay, so phones and browsers can play in the same room.
+- **The relay** under `/rooms/*` that keeps online 1v1, 2v2, and Team vs AI rounds in sync.
 
 ## Run it
 
