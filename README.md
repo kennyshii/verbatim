@@ -1,83 +1,41 @@
 # Verbatim
 
-**Verbatim** is a website that helps students practice debate and Model Congress against an AI that
-argues back, get feedback on how they deliver a speech, and build confidence speaking. It was built for
-the Congressional App Challenge.
+A website for practicing debate and Model Congress. You argue against an AI that argues back, get feedback on how you delivered your speech, and track how you improve. Made for the Congressional App Challenge.
 
-**Try it:** https://verbatim-tvqw.onrender.com (free hosting, so the first load after a quiet period can
-take up to a minute while the server wakes up)
+**Try it:** https://verbatim-tvqw.onrender.com (it's on free hosting, so the first load can take up to a minute while the server wakes up)
 
 **Demo video:** https://youtu.be/7XFuywRBj-E
 
-## Run it locally
+## Features
 
-Verbatim is one Node server with no dependencies (Node 20.12+). It serves the site, makes the AI calls so
-no key ever reaches a browser, and keeps online rounds in sync.
+- **Debate:** argue a resolution live against the AI, or use Coach mode for feedback after every turn. You can also play 1v1 or 2v2 against friends, or team up against the AI.
+- **Speak or type:** tap the mic and your speech is transcribed as you talk.
+- **Delivery feedback:** after a spoken turn you get a delivery score, a map of your claim, evidence and reasoning, and specific things to work on. Take 2 lets you re-record and compare.
+- **Online rounds:** share a six-character code and friends can join without an account, with an AI judge giving the decision.
+- **Model Congress:** all 16 real committees, a statistic lookup with sources, bill uploads, and full round format with points of inquiry.
+- **Community:** post short recorded arguments and react to other students' takes.
+- **Progress:** streaks, session counts, average delivery score and the skills that keep coming up in your feedback.
+- **Settings:** language, a low-pressure mode, plain-language feedback and read-aloud replies.
+
+## Running it locally
+
+It's a single Node server with no dependencies (Node 20.12+). The server serves the site, makes the AI calls so no API key ever reaches the browser, and keeps online rounds in sync.
 
 ```
 cd server
 cp .env.example .env      # add ANTHROPIC_API_KEY=... or GEMINI_API_KEY=...
-node server.js            # open http://localhost:8787
+node server.js            # then open http://localhost:8787
 ```
 
-With an Anthropic key the AI runs on Claude; with only a Gemini key it runs on Google Gemini. See
-`server/README.md` for every setting.
+It uses Claude if you give it an Anthropic key, or Google Gemini if you only give it a Gemini key. `server/README.md` lists every setting.
 
-## What it does
+## Project layout
 
-### Home
-- A **notepad** for organizing your thoughts before you speak, saved to your account.
-- Featured resolutions from the National Speech & Debate Association, one tap away from a round.
+- `server/server.js`: the web server, AI endpoints and online-round relay
+- `server/claude.js`: prompts and the Claude and Gemini calls
+- `server/public/`: the website, with one file per screen in `js/views/`
+- `render.yaml`: hosting config for Render
 
-### Debate
-- **Modes:** Debate (the AI argues the other side live), Coach (low-pressure, feedback after every
-  turn), 1v1 and 2v2 against friends, and Team vs AI with a live crossfire.
-- **Topics:** current Lincoln-Douglas and Public Forum resolutions, or your own.
-- **Speak instead of type:** tap the mic and talk; your speech is transcribed as you go.
-- **Recording analysis:** after a spoken turn you get a separate page with your delivery score, a
-  claim → evidence → reasoning map of your argument, and four specific ways to improve.
-- **Take 2:** re-record the same argument and compare the two versions side by side.
-- **Online rounds:** create a room and share a six-character code; friends join without an account,
-  and an AI judge (Novice or Varsity) gives the decision and a reason for decision.
-- **Feedback** at the end of every round: strongest point, weakest point, missed rebuttal, and a
-  suggestion, plus filler, smoothness, and tone scores.
+## Security
 
-### Model Congress
-- The 16 real committees, searchable, each with its jurisdiction.
-- **Look up a statistic** in the committee's area, with the source that publishes it.
-- **Upload a bill** (PDF, DOCX, TXT, RTF, Markdown) or pick a preset one.
-- Full round format: authorship, constructive, second speech, closing, and open floor. The AI's
-  speeches are read aloud and must be heard in full unless you confirm skipping twice.
-- **Point of inquiry:** a separate parliamentarian AI rules on procedure and facts.
-
-### Community
-- **Take 2 feed:** record a short argument, post it, and like, comment on, and play other students'
-  takes.
-
-### Progress
-- Daily and longest streaks, total sessions, average delivery score, your best lines, and the skills
-  that keep coming up in feedback.
-
-### Settings
-- Language for every round and all feedback, low-pressure mode, plain-language feedback, read replies
-  aloud, and a toggle for the filler meter.
-
-## Where things are
-
-| Path | Role |
-| --- | --- |
-| `server/server.js` | Web server: the site, the `/api` AI endpoints, and the relay for online rounds |
-| `server/claude.js` | Prompts and the Claude / Gemini calls |
-| `server/public/` | The website; `js/views/` has one file per screen |
-| `render.yaml` | Hosting config for Render |
-
-## Privacy and security
-
-- API keys live only on the server, never in the browser or this repo.
-- Passwords are hashed with PBKDF2 before they are stored.
-- AI requests are rate limited per visitor, and request sizes are capped.
-
-## Branding
-
-Navy `#1D2540`, cream `#F6F1E9`, coral `#EE7B5B`, from `verbatimlogo.png`. Type is EB Garamond (SIL Open
-Font License).
+API keys stay on the server and are never committed. Passwords are hashed with PBKDF2, and AI requests are rate limited and size capped.
